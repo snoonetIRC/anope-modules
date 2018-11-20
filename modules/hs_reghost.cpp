@@ -7,10 +7,39 @@
  * 			suffix = ""
  * 			hashPrefix = "/x-"
  * 			replaceChar = "-"
+ * 			server
+ * 			{
+ * 				pattern = "*.example.com"
+ * 				prefix = "example.com/"
+ * 			}
+ * 			server
+ * 			{
+ * 				pattern = "*.example.net"
+ * 				prefix = "example.net/"
+ * 				default = true
+ * 			}
  * 		}
  * */
 
 #include "module.h"
+
+struct ServerVHost
+{
+	Anope::string serverPattern;
+	Anope::string prefix;
+
+	ServerVHost(const Anope::string &pattern, const Anope::string &pfx)
+			: serverPattern(pattern), prefix(pfx)
+	{
+	}
+
+	bool MatchServer(Server *server) const
+	{
+		return Anope::Match(server->GetName(), serverPattern, false, true);
+	}
+};
+
+typedef std::vector<ServerVHost *> VhostList;
 
 class HSRegHost : public Module
 {
@@ -24,6 +53,20 @@ class HSRegHost : public Module
 	std::set<char> validChars;
 	std::set<char> invalidStartEndChars;
 	Reference<BotInfo> HostServ;
+	VhostList vhosts;
+
+	void Sync(const NickAlias *na)
+	{
+		if (!na || !na->HasVhost())
+			return;
+
+		for (unsigned i = 0; i < na->nc->aliases->size(); ++i)
+		{
+			NickAlias *nick = na->nc->aliases->at(i);
+			if (nick)
+				nick->SetVhost(na->GetVhostIdent(), na->GetVhostHost(), na->GetVhostCreator());
+		}
+	}
 
 	Anope::string GetDescriminator(NickAlias *na)
 	{
@@ -32,9 +75,29 @@ class HSRegHost : public Module
 		return sstr.str();
 	}
 
-	Anope::string GenVhost(const Anope::string &hostPrefix, NickAlias *user, const Anope::string &hostSuffix)
+	ServerVHost *GetServerPrefix(Server *server)
 	{
-		Anope::string vhost = hostPrefix + user->nick + hostSuffix;
+		if (vhosts.empty())
+			return NULL;
+
+		if (!server)
+			return vhosts.front();
+
+		for (VhostList::const_iterator it = vhosts.begin(), it_end = vhosts.end(); it != it_end; ++it)
+		{
+			if ((*it)->MatchServer(server))
+				return *it;
+		}
+		return vhosts.front();
+	}
+
+	Anope::string GenVhost(const Anope::string &hostPrefix, NickAlias *user,
+						   const Anope::string &hostSuffix, Server *server)
+	{
+		ServerVHost *serverVHost = GetServerPrefix(server);
+		Anope::string serverPrefix = serverVHost ? serverVHost->prefix : "";
+
+		Anope::string vhost = serverPrefix + hostPrefix + user->nick + hostSuffix;
 		bool valid = true;
 		for (Anope::string::iterator i = vhost.begin(); i != vhost.end(); ++i)
 		{
@@ -68,7 +131,8 @@ class HSRegHost : public Module
 	void SetVHost(NickAlias *na)
 	{
 		Anope::string setter = HostServ->nick;
-		Anope::string vhost = GenVhost(prefix, na, suffix);
+		User *u = User::Find(na->nick);
+		Anope::string vhost = GenVhost(prefix, na, suffix, u ? u->server : NULL);
 
 		if (!IRCD->IsHostValid(vhost))
 			return;
@@ -84,7 +148,6 @@ class HSRegHost : public Module
 		else
 		{
 			// Mimic the HostServ core functionality
-			User *u = User::Find(na->nick);
 
 			if (u && u->Account() == na->nc)
 			{
@@ -107,13 +170,29 @@ class HSRegHost : public Module
 				}
 			}
 		}
+		// Set the vhost across all the user's NickAliases
+		this->Sync(na);
+	}
+
+	void ClearConfig()
+	{
+		for (VhostList::const_iterator it = vhosts.begin(), it_end = vhosts.end(); it != it_end; ++it)
+			delete *it;
+
+		vhosts.clear();
 	}
 
  public:
-	HSRegHost(const Anope::string &modname, const Anope::string &creator) : Module(modname, creator, THIRD)
+	HSRegHost(const Anope::string &modname, const Anope::string &creator)
+			: Module(modname, creator, THIRD), synconset(false), requireConfirm(false), replaceChar('-')
 	{
 		this->SetAuthor("linuxdaemon");
-		this->SetVersion("0.3");
+		this->SetVersion("0.4");
+	}
+
+	~HSRegHost()
+	{
+		ClearConfig();
 	}
 
 	void Prioritize() anope_override
@@ -130,6 +209,18 @@ class HSRegHost : public Module
 	void OnNickConfirm(User *user, NickCore *nc) anope_override
 	{
 		SetVHost(nc->aliases->at(0));
+	}
+
+	void OnChangeCoreDisplay(NickCore *nc, const Anope::string &newdisplay) anope_override
+	{
+		for (std::vector<NickAlias *>::const_iterator it = nc->aliases->begin(); it != nc->aliases->end(); it++)
+		{
+			if ((*it)->nick == newdisplay)
+			{
+				SetVHost((*it));
+				break;
+			}
+		}
 	}
 
 	void OnReload(Configuration::Conf *conf) anope_override
@@ -156,6 +247,18 @@ class HSRegHost : public Module
 		else
 		{
 			replaceChar = replaceChars[0];
+		}
+
+		ClearConfig();
+		for (int i = 0; i < block->CountBlock("server"); ++i)
+		{
+			Configuration::Block *serverBlock = block->GetBlock("server", i);
+			ServerVHost *vhost = new ServerVHost(serverBlock->Get<const Anope::string>("pattern"),
+												 serverBlock->Get<const Anope::string>("prefix"));
+			if (serverBlock->Get<bool>("default"))
+				vhosts.insert(vhosts.begin(), vhost);
+			else
+				vhosts.push_back(vhost);
 		}
 
 		if (nsRegister)
