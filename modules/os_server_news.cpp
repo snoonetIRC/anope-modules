@@ -291,10 +291,12 @@ class OSNews : public Module
 	}
 
  public:
-	OSNews(const Anope::string &modname, const Anope::string &creator) : Module(modname, creator, VENDOR),
+	OSNews(const Anope::string &modname, const Anope::string &creator) : Module(modname, creator, THIRD),
 		newsservice(this), newsitem_type("ServerNewsItem", MyNewsItem::Unserialize),
 		commandOSServerNews(this)
 	{
+		this->SetAuthor("linuxdaemon");
+		this->SetVersion("0.1");
 	}
 
 	void OnReload(Configuration::Conf *conf) anope_override
