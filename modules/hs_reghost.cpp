@@ -29,8 +29,8 @@ struct ServerVHost
 	Anope::string prefix;
 
 	ServerVHost(const Anope::string& pattern, const Anope::string& pfx)
-			: serverPattern(pattern)
-			, prefix(pfx)
+		: serverPattern(pattern)
+		, prefix(pfx)
 	{
 	}
 
@@ -43,7 +43,7 @@ struct ServerVHost
 typedef std::vector<ServerVHost*> VhostList;
 
 class HSRegHost
-		: public Module
+	: public Module
 {
  private:
 	bool synconset;
@@ -186,10 +186,10 @@ class HSRegHost
 
  public:
 	HSRegHost(const Anope::string& modname, const Anope::string& creator)
-			: Module(modname, creator, THIRD)
-			, synconset(false)
-			, requireConfirm(false)
-			, replaceChar('-')
+		: Module(modname, creator, THIRD)
+		, synconset(false)
+		, requireConfirm(false)
+		, replaceChar('-')
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.4");
