@@ -3,11 +3,11 @@
 #include "json_api.h"
 
 class UserAPI
-		: public JsonAPIEndpoint
+	: public JsonAPIEndpoint
 {
  public:
 	UserAPI()
-			: JsonAPIEndpoint("user")
+		: JsonAPIEndpoint("user")
 	{
 	}
 
@@ -46,14 +46,14 @@ class UserAPI
 };
 
 class DataApiModule
-		: public Module
+	: public Module
 {
 	ServiceReference<HTTPProvider> httpd;
 	UserAPI api;
 
  public:
 	DataApiModule(const Anope::string& modname, const Anope::string& creator)
-			: Module(modname, creator, THIRD)
+		: Module(modname, creator, THIRD)
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.1");

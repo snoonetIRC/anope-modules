@@ -17,7 +17,7 @@ typedef long JsonNumber;
 static const char hexchars[] = "0123456789abcdef";
 
 class JsonString
-		: public std::string
+	: public std::string
 {
  public:
 	static std::ostream& EscapeJSON(const std::string& str, std::ostream& out)
@@ -71,17 +71,17 @@ class JsonString
 	}
 
 	JsonString(const char* str)
-			: std::string(str)
+		: std::string(str)
 	{
 	}
 
 	JsonString(const std::string& str)
-			: std::string(str)
+		: std::string(str)
 	{
 	}
 
 	JsonString(const JsonString& str)
-			: std::string(str)
+		: std::string(str)
 	{
 	}
 
@@ -129,14 +129,14 @@ class JsonValue
 	JsonValue& SetType(ValueType newType);
 
 	JsonValue()
-			: type(JSON_NULL)
-			, object(NULL)
+		: type(JSON_NULL)
+		, object(NULL)
 	{
 	}
 
 	JsonValue(const JsonValue& other)
-			: type(JSON_NULL)
-			, object(NULL)
+		: type(JSON_NULL)
+		, object(NULL)
 	{
 		*this = other;
 	}
@@ -240,7 +240,7 @@ class JsonValue
 };
 
 class JsonObject
-		: public std::map<JsonString, JsonValue>
+	: public std::map<JsonString, JsonValue>
 {
 	typedef std::map<JsonString, JsonValue> BaseT;
  public:
@@ -269,18 +269,18 @@ class JsonObject
 	}
 
 	JsonObject(const JsonObject& other)
-			: BaseT(other)
+		: BaseT(other)
 	{
 	}
 
 	JsonObject(const BaseT& other)
-			: BaseT(other)
+		: BaseT(other)
 	{
 	}
 };
 
 class JsonArray
-		: public std::vector<JsonValue>
+	: public std::vector<JsonValue>
 {
 	typedef std::vector<JsonValue> BaseT;
  public:
@@ -308,18 +308,18 @@ class JsonArray
 	}
 
 	JsonArray(const JsonArray& other)
-			: BaseT(other)
+		: BaseT(other)
 	{
 	}
 
 	JsonArray(const BaseT& other)
-			: BaseT(other)
+		: BaseT(other)
 	{
 	}
 };
 
 class JsonSerializeData
-		: public SQL::Data
+	: public SQL::Data
 {
  public:
 	void GetJson(JsonObject& object) const
@@ -346,11 +346,11 @@ class JsonSerializeData
 };
 
 class JsonAPIEndpoint
-		: public HTTPPage
+	: public HTTPPage
 {
  public:
 	JsonAPIEndpoint(const Anope::string& u)
-			: HTTPPage("/api/" + u, "application/json")
+		: HTTPPage("/api/" + u, "application/json")
 	{
 	}
 };
