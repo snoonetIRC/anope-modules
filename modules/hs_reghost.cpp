@@ -28,20 +28,22 @@ struct ServerVHost
 	Anope::string serverPattern;
 	Anope::string prefix;
 
-	ServerVHost(const Anope::string &pattern, const Anope::string &pfx)
-			: serverPattern(pattern), prefix(pfx)
+	ServerVHost(const Anope::string& pattern, const Anope::string& pfx)
+		: serverPattern(pattern)
+		, prefix(pfx)
 	{
 	}
 
-	bool MatchServer(Server *server) const
+	bool MatchServer(Server* server) const
 	{
 		return Anope::Match(server->GetName(), serverPattern, false, true);
 	}
 };
 
-typedef std::vector<ServerVHost *> VhostList;
+typedef std::vector<ServerVHost*> VhostList;
 
-class HSRegHost : public Module
+class HSRegHost
+	: public Module
 {
  private:
 	bool synconset;
@@ -55,27 +57,27 @@ class HSRegHost : public Module
 	Reference<BotInfo> HostServ;
 	VhostList vhosts;
 
-	void Sync(const NickAlias *na)
+	void Sync(const NickAlias* na)
 	{
 		if (!na || !na->HasVhost())
 			return;
 
 		for (unsigned i = 0; i < na->nc->aliases->size(); ++i)
 		{
-			NickAlias *nick = na->nc->aliases->at(i);
+			NickAlias* nick = na->nc->aliases->at(i);
 			if (nick)
 				nick->SetVhost(na->GetVhostIdent(), na->GetVhostHost(), na->GetVhostCreator());
 		}
 	}
 
-	Anope::string GetDescriminator(NickAlias *na)
+	Anope::string GetDescriminator(NickAlias* na)
 	{
 		std::stringstream sstr;
 		sstr << std::hex << na->time_registered;
 		return sstr.str();
 	}
 
-	ServerVHost *GetServerPrefix(Server *server)
+	ServerVHost* GetServerPrefix(Server* server)
 	{
 		if (vhosts.empty())
 			return NULL;
@@ -91,10 +93,10 @@ class HSRegHost : public Module
 		return vhosts.front();
 	}
 
-	Anope::string GenVhost(const Anope::string &hostPrefix, NickAlias *user,
-						   const Anope::string &hostSuffix, Server *server)
+	Anope::string GenVhost(const Anope::string& hostPrefix, NickAlias* user,
+						   const Anope::string& hostSuffix, Server* server)
 	{
-		ServerVHost *serverVHost = GetServerPrefix(server);
+		ServerVHost* serverVHost = GetServerPrefix(server);
 		Anope::string serverPrefix = serverVHost ? serverVHost->prefix : "";
 
 		Anope::string vhost = serverPrefix + hostPrefix + user->nick + hostSuffix;
@@ -128,10 +130,10 @@ class HSRegHost : public Module
 		return vhost;
 	}
 
-	void SetVHost(NickAlias *na)
+	void SetVHost(NickAlias* na)
 	{
 		Anope::string setter = HostServ->nick;
-		User *u = User::Find(na->nick);
+		User* u = User::Find(na->nick);
 		Anope::string vhost = GenVhost(prefix, na, suffix, u ? u->server : NULL);
 
 		if (!IRCD->IsHostValid(vhost))
@@ -183,8 +185,11 @@ class HSRegHost : public Module
 	}
 
  public:
-	HSRegHost(const Anope::string &modname, const Anope::string &creator)
-			: Module(modname, creator, THIRD), synconset(false), requireConfirm(false), replaceChar('-')
+	HSRegHost(const Anope::string& modname, const Anope::string& creator)
+		: Module(modname, creator, THIRD)
+		, synconset(false)
+		, requireConfirm(false)
+		, replaceChar('-')
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.4");
@@ -200,20 +205,20 @@ class HSRegHost : public Module
 		ModuleManager::SetPriority(this, PRIORITY_LAST);
 	}
 
-	void OnNickRegister(User *user, NickAlias *na, const Anope::string &pass) anope_override
+	void OnNickRegister(User* user, NickAlias* na, const Anope::string& pass) anope_override
 	{
 		if (!requireConfirm)
 			SetVHost(na);
 	}
 
-	void OnNickConfirm(User *user, NickCore *nc) anope_override
+	void OnNickConfirm(User* user, NickCore* nc) anope_override
 	{
 		SetVHost(nc->aliases->at(0));
 	}
 
-	void OnChangeCoreDisplay(NickCore *nc, const Anope::string &newdisplay) anope_override
+	void OnChangeCoreDisplay(NickCore* nc, const Anope::string& newdisplay) anope_override
 	{
-		for (std::vector<NickAlias *>::const_iterator it = nc->aliases->begin(); it != nc->aliases->end(); it++)
+		for (std::vector<NickAlias*>::const_iterator it = nc->aliases->begin(); it != nc->aliases->end(); it++)
 		{
 			if ((*it)->nick == newdisplay)
 			{
@@ -223,13 +228,13 @@ class HSRegHost : public Module
 		}
 	}
 
-	void OnReload(Configuration::Conf *conf) anope_override
+	void OnReload(Configuration::Conf* conf) anope_override
 	{
-		Configuration::Block *block = conf->GetModule(this);
-		Configuration::Block *hostServ = conf->GetModule("hostserv");
-		Configuration::Block *hsGroup = conf->GetModule("hs_group");
-		Configuration::Block *nsRegister = conf->GetModule("ns_register");
-		Configuration::Block *netInfo = conf->GetBlock("networkinfo");
+		Configuration::Block* block = conf->GetModule(this);
+		Configuration::Block* hostServ = conf->GetModule("hostserv");
+		Configuration::Block* hsGroup = conf->GetModule("hs_group");
+		Configuration::Block* nsRegister = conf->GetModule("ns_register");
+		Configuration::Block* netInfo = conf->GetBlock("networkinfo");
 
 		if (!block)
 			throw ConfigException(this->name + ": Config block appears undefined?! This is almost certainly a bug");
@@ -252,8 +257,8 @@ class HSRegHost : public Module
 		ClearConfig();
 		for (int i = 0; i < block->CountBlock("server"); ++i)
 		{
-			Configuration::Block *serverBlock = block->GetBlock("server", i);
-			ServerVHost *vhost = new ServerVHost(serverBlock->Get<const Anope::string>("pattern"),
+			Configuration::Block* serverBlock = block->GetBlock("server", i);
+			ServerVHost* vhost = new ServerVHost(serverBlock->Get<const Anope::string>("pattern"),
 												 serverBlock->Get<const Anope::string>("prefix"));
 			if (serverBlock->Get<bool>("default"))
 				vhosts.insert(vhosts.begin(), vhost);
@@ -275,7 +280,7 @@ class HSRegHost : public Module
 		if (hsnick.empty())
 			throw ConfigException(this->name + ": <hostserv:client> must be defined");
 
-		BotInfo *bi = BotInfo::Find(hsnick, true);
+		BotInfo* bi = BotInfo::Find(hsnick, true);
 		if (!bi)
 			throw ConfigException(this->name + ": no bot named " + hsnick);
 
