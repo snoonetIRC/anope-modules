@@ -14,9 +14,9 @@
  * 			}
  * 			server
  * 			{
- * 				pattern = "*.example.net"
- * 				prefix = "example.net/"
- * 				default = true
+ * 				// Matches all unmatched sources, acts as default
+ * 				pattern = "*"
+ * 				prefix = "default.example.net/"
  * 			}
  * 		}
  * */
@@ -79,18 +79,12 @@ class HSRegHost
 
 	ServerVHost* GetServerPrefix(const Anope::string& source)
 	{
-		if (vhosts.empty())
-			return NULL;
-
-		if (source.empty())
-			return vhosts.front();
-
 		for (VhostList::const_iterator it = vhosts.begin(), it_end = vhosts.end(); it != it_end; ++it)
 		{
 			if ((*it)->MatchServer(source))
 				return *it;
 		}
-		return vhosts.front();
+		return NULL;
 	}
 
 	Anope::string GenVhost(const Anope::string& hostPrefix, NickAlias* user,
@@ -237,7 +231,7 @@ class HSRegHost
 			SetVHost(na);
 	}
 
-	virtual void OnUserLogin(User* u) anope_override
+	void OnUserLogin(User* u) anope_override
 	{
 		NickCore* nc = u->Account();
 		if (nc && recheck.HasExt(nc))
@@ -293,10 +287,7 @@ class HSRegHost
 			Configuration::Block* serverBlock = block->GetBlock("server", i);
 			ServerVHost* vhost = new ServerVHost(serverBlock->Get<const Anope::string>("pattern"),
 												 serverBlock->Get<const Anope::string>("prefix"));
-			if (serverBlock->Get<bool>("default"))
-				vhosts.insert(vhosts.begin(), vhost);
-			else
-				vhosts.push_back(vhost);
+			vhosts.push_back(vhost);
 		}
 
 		if (nsRegister)
@@ -322,8 +313,11 @@ class HSRegHost
 		if (!netInfo)
 			throw ConfigException(this->name + ": networkinfo block appears undefined, this is a bug!");
 
-		Anope::string badStartChars = netInfo->Get<const Anope::string>("disallow_start_or_end");
-		Anope::string vhostChars = netInfo->Get<const Anope::string>("vhost_chars");
+		Anope::string badStartChars, vhostChars;
+
+		badStartChars = netInfo->Get<const Anope::string>("disallow_start_or_end");
+		vhostChars = netInfo->Get<const Anope::string>("vhost_chars");
+
 		validChars = std::set<char>(vhostChars.begin(), vhostChars.end());
 		invalidStartEndChars = std::set<char>(badStartChars.begin(), badStartChars.end());
 	}
