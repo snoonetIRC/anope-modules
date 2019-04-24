@@ -34,9 +34,9 @@ struct ServerVHost
 	{
 	}
 
-	bool MatchServer(Server* server) const
+	bool MatchServer(const Anope::string& source) const
 	{
-		return Anope::Match(server->GetName(), serverPattern, false, true);
+		return Anope::Match(source, serverPattern, false, true);
 	}
 };
 
@@ -77,26 +77,26 @@ class HSRegHost
 		return sstr.str();
 	}
 
-	ServerVHost* GetServerPrefix(Server* server)
+	ServerVHost* GetServerPrefix(const Anope::string& source)
 	{
 		if (vhosts.empty())
 			return NULL;
 
-		if (!server)
+		if (source.empty())
 			return vhosts.front();
 
 		for (VhostList::const_iterator it = vhosts.begin(), it_end = vhosts.end(); it != it_end; ++it)
 		{
-			if ((*it)->MatchServer(server))
+			if ((*it)->MatchServer(source))
 				return *it;
 		}
 		return vhosts.front();
 	}
 
 	Anope::string GenVhost(const Anope::string& hostPrefix, NickAlias* user,
-						   const Anope::string& hostSuffix, Server* server)
+						   const Anope::string& hostSuffix, const Anope::string& source)
 	{
-		ServerVHost* serverVHost = GetServerPrefix(server);
+		ServerVHost* serverVHost = GetServerPrefix(source);
 		Anope::string serverPrefix = serverVHost ? serverVHost->prefix : "";
 
 		Anope::string vhost = serverPrefix + hostPrefix + user->nick + hostSuffix;
@@ -130,11 +130,32 @@ class HSRegHost
 		return vhost;
 	}
 
+	Anope::string GetRegSource(NickCore* nc)
+	{
+		if (!nc)
+			return "";
+
+		Anope::string* srv = regserver->Get(nc);
+		if (srv)
+			return *srv;
+
+		return "";
+	}
+
 	void SetVHost(NickAlias* na)
 	{
+		NickCore* nc = na->nc;
+		recheck.Unset(nc);
+		Anope::string source;
+		if ((source = GetRegSource(nc)).empty())
+		{
+			recheck.Set(nc);
+			return;
+		}
+
 		Anope::string setter = HostServ->nick;
 		User* u = User::Find(na->nick);
-		Anope::string vhost = GenVhost(prefix, na, suffix, u ? u->server : NULL);
+		Anope::string vhost = GenVhost(prefix, na, suffix, source);
 
 		if (!IRCD->IsHostValid(vhost))
 			return;
@@ -184,15 +205,20 @@ class HSRegHost
 		vhosts.clear();
 	}
 
+	SerializableExtensibleItem<bool> recheck;
+	ExtensibleRef<Anope::string> regserver;
+
  public:
 	HSRegHost(const Anope::string& modname, const Anope::string& creator)
 		: Module(modname, creator, THIRD)
 		, synconset(false)
 		, requireConfirm(false)
 		, replaceChar('-')
+		, recheck(this, "REGHOST_RECHECK")
+		, regserver("REGSERVER")
 	{
 		this->SetAuthor("linuxdaemon");
-		this->SetVersion("0.4");
+		this->SetVersion("0.5");
 	}
 
 	~HSRegHost()
@@ -207,8 +233,15 @@ class HSRegHost
 
 	void OnNickRegister(User* user, NickAlias* na, const Anope::string& pass) anope_override
 	{
-		if (!requireConfirm)
+		if (!requireConfirm && na->nc->aliases->size() == 1)
 			SetVHost(na);
+	}
+
+	virtual void OnUserLogin(User* u) anope_override
+	{
+		NickCore* nc = u->Account();
+		if (nc && recheck.HasExt(nc))
+			OnNickConfirm(u, nc);
 	}
 
 	void OnNickConfirm(User* user, NickCore* nc) anope_override
