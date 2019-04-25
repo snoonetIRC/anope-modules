@@ -83,11 +83,15 @@ struct RegisterData
 	Anope::string email;
 	Anope::string password;
 	Anope::string source;
+	Anope::string ident;
+	Anope::string ip;
 
 	static RegisterData FromMessage(APIRequest& request)
 	{
 		RegisterData data;
 		data.username = request.GetParameter("username");
+		data.ident = request.GetParameter("ident");
+		data.ip = request.GetParameter("ip");
 		data.email = request.GetParameter("email");
 		data.password = request.GetParameter("password");
 		data.source = request.GetParameter("source");
@@ -132,7 +136,7 @@ class APIEndpoint
 
 		for (RequiredParams::const_iterator it = required_params.begin(); it != required_params.end(); ++it)
 		{
-			if (!request.HasParameter(*it))
+			if (request.GetParameter(*it).empty())
 				missing.push_back(*it);
 		}
 
@@ -213,6 +217,7 @@ class RegistrationEndpoint
 	bool restrictopernicks;
 	bool forceemail;
 	bool strictpasswords;
+	bool accessonreg;
 
 	unsigned passlen;
 
@@ -376,6 +381,7 @@ class RegistrationEndpoint
 		, restrictopernicks(true)
 		, forceemail(true)
 		, strictpasswords(true)
+		, accessonreg(true)
 		, passlen(32)
 		, regmail("registration")
 	{
@@ -399,6 +405,8 @@ class RegistrationEndpoint
 		strictpasswords = conf->GetBlock("options")->Get<bool>("strictpasswords");
 
 		nsregister = conf->GetModule("ns_register")->Get<const Anope::string>("registration");
+
+		accessonreg = conf->GetModule("ns_access")->Get<bool>("addaccessonreg");
 
 		network = conf->GetBlock("networkinfo")->Get<const Anope::string>("networkname");
 
@@ -441,6 +449,9 @@ class RegistrationEndpoint
 		}
 
 		FOREACH_MOD(OnNickRegister, (NULL, na, data.password));
+
+		if (!(data.ip.empty() || data.ident.empty()) && accessonreg)
+			nc->AddAccess(data.ident + "@" + data.ip);
 
 		SessionRef session = new Session(nc);
 
