@@ -228,7 +228,7 @@ class APIEndpoint
 	virtual bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) = 0;
 
 	bool OnRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
-				   HTTPReply& reply)
+				   HTTPReply& reply) anope_override
 	{
 		JsonObject responseObject, errorObject;
 
@@ -445,7 +445,7 @@ class RegistrationEndpoint
 		regmail.DoReload(conf);
 	}
 
-	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject)
+	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
 		RegisterData data = RegisterData::FromMessage(message);
 		if (!CheckRequest(data, errorObject))
@@ -503,7 +503,7 @@ class ConfirmEndpoint
 	{
 	}
 
-	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject)
+	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
 		Anope::string code, session_id;
 
@@ -565,7 +565,7 @@ class APIIndentifyRequest
 		client->SendReply(&reply);
 	}
 
-	void OnSuccess()
+	void OnSuccess() anope_override
 	{
 		NickAliasRef na = NickAlias::Find(GetAccount());
 		SessionRef session = new Session(na->nc);
@@ -577,7 +577,7 @@ class APIIndentifyRequest
 		OnResult(obj);
 	}
 
-	void OnFail()
+	void OnFail() anope_override
 	{
 		JsonObject obj, error;
 		error["id"] = "failed_login";
@@ -604,7 +604,7 @@ class LoginEndpoint
 	}
 
 	bool OnRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
-				   HTTPReply& reply)
+				   HTTPReply& reply) anope_override
 	{
 		Anope::string user, password;
 
@@ -627,7 +627,7 @@ class LogoutEndpoint
 	{
 	}
 
-	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject)
+	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
 		Anope::string session_id = message.post_data["session"];
 
