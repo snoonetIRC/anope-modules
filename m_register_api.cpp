@@ -7,24 +7,6 @@
 #define GUEST_SUFFIX_LENGTH 7
 #define STRICT_PASS_LENGTH 5
 
-struct RegisterData
-{
-	Anope::string username;
-	Anope::string email;
-	Anope::string password;
-	Anope::string source;
-
-	static RegisterData FromMessage(HTTPMessage& message)
-	{
-		RegisterData data;
-		data.username = message.post_data["username"];
-		data.email = message.post_data["email"];
-		data.password = message.post_data["password"];
-		data.source = message.post_data["source"];
-		return data;
-	}
-};
-
 class APIRequest
 	: public HTTPMessage
 {
@@ -92,6 +74,24 @@ class APIRequest
 		data_value_type value;
 		GetParameter(name, value);
 		return value;
+	}
+};
+
+struct RegisterData
+{
+	Anope::string username;
+	Anope::string email;
+	Anope::string password;
+	Anope::string source;
+
+	static RegisterData FromMessage(APIRequest& request)
+	{
+		RegisterData data;
+		data.username = request.GetParameter("username");
+		data.email = request.GetParameter("email");
+		data.password = request.GetParameter("password");
+		data.source = request.GetParameter("source");
+		return data;
 	}
 };
 
