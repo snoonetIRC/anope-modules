@@ -367,6 +367,10 @@ class RegistrationEndpoint
 		, passlen(32)
 		, regmail("registration")
 	{
+		AddRequiredParam("username");
+		AddRequiredParam("email");
+		AddRequiredParam("password");
+		AddRequiredParam("source");
 	}
 
 	void OnReload(Configuration::Conf* conf)
@@ -443,6 +447,8 @@ class ConfirmEndpoint
 	ConfirmEndpoint()
 		: BasicAPIEndpoint("confirm")
 	{
+		AddRequiredParam("session");
+		AddRequiredParam("code");
 	}
 
 	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) anope_override
@@ -544,6 +550,8 @@ class LoginEndpoint
 		: APIEndpoint("login")
 		, owner(Owner)
 	{
+		AddRequiredParam("username");
+		AddRequiredParam("password");
 	}
 
 	bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
@@ -568,6 +576,7 @@ class LogoutEndpoint
 	LogoutEndpoint()
 		: BasicAPIEndpoint("logout")
 	{
+		AddRequiredParam("session");
 	}
 
 	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) anope_override
