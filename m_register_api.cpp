@@ -156,11 +156,23 @@ class APIEndpoint
 		Log(LOG_NORMAL, this->GetEndpointID()) << "API: " << GetEndpointID() << ": Request received from "
 											   << request.getClientId() << " on " << request.getClientIp();
 
-		return HandleRequest(provider, string, client, message, reply);
+		return HandleRequest(provider, string, client, request, reply);
 	}
 
 	virtual bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client,
-							   HTTPMessage& message, HTTPReply& reply) = 0;
+							   APIRequest& request, HTTPReply& reply) = 0;
+};
+
+class APILogger
+	: public Log
+{
+ public:
+	APILogger(const APIEndpoint& endpoint, const APIRequest& request)
+		: Log(LOG_NORMAL, endpoint.GetURL().substr(1))
+	{
+		*this << "API: " << category << " from " << request.getClientId()
+			  << " on " << request.getClientIp() << ": ";
+	}
 };
 
 class BasicAPIEndpoint
@@ -172,12 +184,12 @@ class BasicAPIEndpoint
 	{
 	}
 
-	bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
+	bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, APIRequest& request,
 					   HTTPReply& reply) anope_override
 	{
 		JsonObject responseObject, errorObject;
 
-		if (!HandleRequest(message, responseObject, errorObject))
+		if (!HandleRequest(request, responseObject, errorObject))
 		{
 			responseObject["error"] = errorObject;
 			responseObject["status"] = "error";
@@ -191,7 +203,7 @@ class BasicAPIEndpoint
 		return true;
 	}
 
-	virtual bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) = 0;
+	virtual bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) = 0;
 };
 
 class RegistrationEndpoint
@@ -393,9 +405,9 @@ class RegistrationEndpoint
 		regmail.DoReload(conf);
 	}
 
-	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
-		RegisterData data = RegisterData::FromMessage(message);
+		RegisterData data = RegisterData::FromMessage(request);
 		if (!CheckRequest(data, errorObject))
 			return false;
 
@@ -410,8 +422,8 @@ class RegistrationEndpoint
 
 		Anope::string emailStr = (!na->nc->email.empty() ? na->nc->email : "none");
 
-		Log(LOG_NORMAL, this->GetURL().substr(1)) << "API: Account created: " << na->nick
-												  << " (email: " << emailStr << ")";
+		APILogger(*this, request) << "Account created: " << nc->display
+								  << " (email: " << emailStr << ")";
 
 		regserverExt->Set(nc, data.source);
 
@@ -453,12 +465,12 @@ class ConfirmEndpoint
 		AddRequiredParam("code");
 	}
 
-	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
 		Anope::string code, session_id;
 
-		code = message.post_data["code"];
-		session_id = message.post_data["session"];
+		code = request.GetParameter("code");
+		session_id = request.GetParameter("session");
 
 		SessionRef session = Session::Find(session_id);
 		if (!session || !session->LoggedIn())
@@ -556,13 +568,13 @@ class LoginEndpoint
 		AddRequiredParam("password");
 	}
 
-	bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
+	bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, APIRequest& request,
 					   HTTPReply& reply) anope_override
 	{
 		Anope::string user, password;
 
-		user = message.post_data["username"];
-		password = message.post_data["password"];
+		user = request.GetParameter("username");
+		password = request.GetParameter("password");
 
 		APIIndentifyRequest* req = new APIIndentifyRequest(owner, user, password, reply, client);
 		FOREACH_MOD(OnCheckAuthentication, (NULL, req));
@@ -581,9 +593,9 @@ class LogoutEndpoint
 		AddRequiredParam("session");
 	}
 
-	bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
-		Anope::string session_id = message.post_data["session"];
+		Anope::string session_id = request.GetParameter("session");
 
 		SessionRef session = Session::Find(session_id);
 		if (!session || !session->LoggedIn())
