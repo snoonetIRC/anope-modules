@@ -217,12 +217,17 @@ class EmailTemplate
 	}
 };
 
-class APIEndpoint
-	: public JsonAPIEndpoint
+class APIEndpoint : public JsonAPIEndpoint {
+ public:
+	APIEndpoint(const Anope::string& u) : JsonAPIEndpoint(u) {}
+};
+
+class BasicAPIEndpoint
+	: public APIEndpoint
 {
  public:
-	APIEndpoint(const Anope::string& u)
-		: JsonAPIEndpoint(u)
+	BasicAPIEndpoint(const Anope::string& u)
+		: APIEndpoint(u)
 	{
 	}
 
@@ -249,7 +254,7 @@ class APIEndpoint
 };
 
 class RegistrationEndpoint
-	: public APIEndpoint
+	: public BasicAPIEndpoint
 {
  private:
 	bool restrictopernicks;
@@ -417,7 +422,7 @@ class RegistrationEndpoint
 
  public:
 	RegistrationEndpoint()
-		: APIEndpoint("register")
+		: BasicAPIEndpoint("register")
 		, restrictopernicks(true)
 		, forceemail(true)
 		, strictpasswords(true)
@@ -496,11 +501,11 @@ class RegistrationEndpoint
 };
 
 class ConfirmEndpoint
-	: public APIEndpoint
+	: public BasicAPIEndpoint
 {
  public:
 	ConfirmEndpoint()
-		: APIEndpoint("confirm")
+		: BasicAPIEndpoint("confirm")
 	{
 	}
 
@@ -592,14 +597,14 @@ class APIIndentifyRequest
 };
 
 class LoginEndpoint
-	: public JsonAPIEndpoint
+	: public APIEndpoint
 {
  private:
 	Module* owner;
 
  public:
 	LoginEndpoint(Module* Owner)
-		: JsonAPIEndpoint("login")
+		: APIEndpoint("login")
 		, owner(Owner)
 	{
 	}
@@ -620,11 +625,11 @@ class LoginEndpoint
 };
 
 class LogoutEndpoint
-	: public APIEndpoint
+	: public BasicAPIEndpoint
 {
  public:
 	LogoutEndpoint()
-		: APIEndpoint("logout")
+		: BasicAPIEndpoint("logout")
 	{
 	}
 
