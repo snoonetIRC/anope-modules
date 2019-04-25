@@ -217,9 +217,14 @@ class EmailTemplate
 	}
 };
 
-class APIEndpoint : public JsonAPIEndpoint {
+class APIEndpoint
+	: public JsonAPIEndpoint
+{
  public:
-	APIEndpoint(const Anope::string& u) : JsonAPIEndpoint(u) {}
+	APIEndpoint(const Anope::string& u)
+		: JsonAPIEndpoint(u)
+	{
+	}
 };
 
 class BasicAPIEndpoint
@@ -558,7 +563,8 @@ class APIIndentifyRequest
 	HTTPClientRef client;
 
  public:
-	APIIndentifyRequest(Module* o, const Anope::string& acc, const Anope::string& pass, HTTPReply& Reply, const HTTPClientRef& Client)
+	APIIndentifyRequest(Module* o, const Anope::string& acc, const Anope::string& pass, HTTPReply& Reply,
+						const HTTPClientRef& Client)
 		: IdentifyRequest(o, acc, pass)
 		, reply(Reply)
 		, client(Client)
@@ -617,7 +623,7 @@ class LoginEndpoint
 		user = message.post_data["username"];
 		password = message.post_data["password"];
 
-		APIIndentifyRequest *req = new APIIndentifyRequest(owner, user, password, reply, client);
+		APIIndentifyRequest* req = new APIIndentifyRequest(owner, user, password, reply, client);
 		FOREACH_MOD(OnCheckAuthentication, (NULL, req));
 		req->Dispatch();
 		return false;
