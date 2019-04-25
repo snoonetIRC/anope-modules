@@ -107,9 +107,6 @@ class RegistrationEndpoint
 	Anope::string guestnick;
 	Anope::string network;
 
-	ExtensibleRef<bool> unconfirmed;
-	ExtensibleRef<Anope::string> regserver;
-
 	EmailTemplate regmail;
 
 	bool SendRegmail(const NickAliasRef& na)
@@ -267,8 +264,6 @@ class RegistrationEndpoint
 		, forceemail(true)
 		, strictpasswords(true)
 		, passlen(32)
-		, unconfirmed("UNCONFIRMED")
-		, regserver("REGSERVER")
 		, regmail("registration")
 	{
 	}
@@ -311,17 +306,17 @@ class RegistrationEndpoint
 		Log(LOG_NORMAL, this->GetURL().substr(1)) << "API: Account created: " << na->nick
 												  << " (email: " << emailStr << ")";
 
-		regserver->Set(nc, data.source);
+		regserverExt->Set(nc, data.source);
 
 		if (nsregister.equals_ci("admin"))
 		{
-			unconfirmed->Set(nc);
+			unconfirmedExt->Set(nc);
 		}
 		else if (nsregister.equals_ci("mail"))
 		{
 			if (!data.email.empty())
 			{
-				unconfirmed->Set(nc);
+				unconfirmedExt->Set(nc);
 				SendRegmail(na);
 			}
 		}
@@ -331,7 +326,7 @@ class RegistrationEndpoint
 		SessionRef session = new Session(nc);
 
 		responseObject["session"] = session->id;
-		if (unconfirmed->Get(nc))
+		if (unconfirmedExt->Get(nc))
 		{
 			responseObject["verify"] = nsregister;
 		}

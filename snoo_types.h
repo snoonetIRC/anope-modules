@@ -5,6 +5,7 @@
 
 ExtensibleRef<Anope::string> passcodeExt("passcode");
 ExtensibleRef<bool> unconfirmedExt("UNCONFIRMED");
+ExtensibleRef<Anope::string> regserverExt("REGSERVER");
 
 typedef Serialize::Reference<NickCore> NickCoreRef;
 typedef Serialize::Reference<NickAlias> NickAliasRef;
