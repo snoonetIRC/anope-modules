@@ -558,7 +558,7 @@ class APIIndentifyRequest
 	HTTPClientRef client;
 
  public:
-	APIIndentifyRequest(Module* o, const Anope::string& acc, const Anope::string& pass, HTTPReply& Reply, HTTPClientRef Client)
+	APIIndentifyRequest(Module* o, const Anope::string& acc, const Anope::string& pass, HTTPReply& Reply, const HTTPClientRef& Client)
 		: IdentifyRequest(o, acc, pass)
 		, reply(Reply)
 		, client(Client)
