@@ -246,6 +246,9 @@ class JsonObject
  public:
 	std::ostream& str(std::ostream& os) const
 	{
+		if (empty())
+			return os << "{}";
+
 		char sep = '{';
 		for (JsonObject::const_iterator it = begin(); it != end(); ++it)
 		{
@@ -286,6 +289,9 @@ class JsonArray
  public:
 	std::ostream& str(std::ostream& os) const
 	{
+		if (empty())
+			return os << "[]";
+
 		char sep = '[';
 		for (JsonArray::const_iterator it = begin(); it != end(); ++it)
 		{
