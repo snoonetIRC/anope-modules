@@ -210,6 +210,8 @@ class BasicAPIEndpoint
 		{
 			responseObject["error"] = errorObject;
 			responseObject["status"] = "error";
+
+			APILogger(*this, request) << "Error: " << errorObject["id"].str();
 		}
 		else
 		{
