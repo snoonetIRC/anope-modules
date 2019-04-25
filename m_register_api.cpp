@@ -368,9 +368,11 @@ class RegistrationEndpoint
 		, regmail("registration")
 	{
 		AddRequiredParam("username");
-		AddRequiredParam("email");
 		AddRequiredParam("password");
 		AddRequiredParam("source");
+
+		if (forceemail)
+			AddRequiredParam("email");
 	}
 
 	void OnReload(Configuration::Conf* conf)
