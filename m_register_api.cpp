@@ -225,6 +225,33 @@ class APIEndpoint
 		: JsonAPIEndpoint(u)
 	{
 	}
+
+	Anope::string GetEndpointID() const
+	{
+		return this->GetURL().substr(1);
+	}
+
+	bool OnRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client,
+				   HTTPMessage& message, HTTPReply& reply) anope_override
+	{
+		Anope::string client_id, client_ip;
+		client_id = message.post_data["client_id"];
+		client_ip = client->GetIP();
+
+		if (client_id.empty() || client_ip.empty())
+		{
+			reply.error = HTTP_BAD_REQUEST;
+			return true;
+		}
+
+		Log(LOG_NORMAL, this->GetEndpointID()) << "API: " << GetEndpointID() << ": Request received from " << client_id
+											   << " on " << client_ip;
+
+		return HandleRequest(provider, string, client, message, reply);
+	}
+
+	virtual bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client,
+							   HTTPMessage& message, HTTPReply& reply) = 0;
 };
 
 class BasicAPIEndpoint
@@ -236,10 +263,8 @@ class BasicAPIEndpoint
 	{
 	}
 
-	virtual bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) = 0;
-
-	bool OnRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
-				   HTTPReply& reply) anope_override
+	bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
+					   HTTPReply& reply) anope_override
 	{
 		JsonObject responseObject, errorObject;
 
@@ -256,6 +281,8 @@ class BasicAPIEndpoint
 
 		return true;
 	}
+
+	virtual bool HandleRequest(HTTPMessage& message, JsonObject& responseObject, JsonObject& errorObject) = 0;
 };
 
 class RegistrationEndpoint
@@ -615,8 +642,8 @@ class LoginEndpoint
 	{
 	}
 
-	bool OnRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
-				   HTTPReply& reply) anope_override
+	bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, HTTPMessage& message,
+					   HTTPReply& reply) anope_override
 	{
 		Anope::string user, password;
 
