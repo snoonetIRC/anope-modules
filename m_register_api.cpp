@@ -25,13 +25,91 @@ struct RegisterData
 	}
 };
 
+class APIRequest
+	: public HTTPMessage
+{
+ public:
+	typedef Anope::string data_value_type;
+	typedef Anope::string ip_t;
+
+ private:
+	const Anope::string client_id;
+	const ip_t client_ip;
+
+ public:
+	APIRequest(const APIRequest& other)
+		: HTTPMessage(other)
+		, client_id(other.client_id)
+		, client_ip(other.client_ip)
+	{
+	}
+
+	explicit APIRequest(const HTTPMessage& message, const ip_t& ClientIP)
+		: HTTPMessage(message)
+		, client_id(GetParameter("client_id"))
+		, client_ip(ClientIP)
+	{
+	}
+
+	virtual ~APIRequest()
+	{
+	}
+
+	const Anope::string& getClientId() const
+	{
+		return client_id;
+	}
+
+	const ip_t& getClientIp() const
+	{
+		return client_ip;
+	}
+
+	bool IsValid() const
+	{
+		return !(client_id.empty() || client_ip.empty());
+	}
+
+	bool HasParameter(const Anope::string& name) const
+	{
+		return post_data.find(name) != post_data.end();
+	}
+
+	bool GetParameter(const Anope::string& name, data_value_type& value) const
+	{
+		std::map<Anope::string, Anope::string>::const_iterator it = post_data.find(name);
+
+		if (it == post_data.end())
+			return false;
+
+		value = it->second;
+
+		return true;
+	}
+
+	data_value_type GetParameter(const Anope::string& name) const
+	{
+		data_value_type value;
+		GetParameter(name, value);
+		return value;
+	}
+};
+
 class APIEndpoint
 	: public JsonAPIEndpoint
 {
+	typedef std::set<Anope::string> RequiredParams;
+	RequiredParams required_params;
+
  public:
 	APIEndpoint(const Anope::string& u)
 		: JsonAPIEndpoint(u)
 	{
+	}
+
+	void AddRequiredParam(const Anope::string& name)
+	{
+		required_params.insert(name);
 	}
 
 	Anope::string GetEndpointID() const
@@ -42,18 +120,41 @@ class APIEndpoint
 	bool OnRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client,
 				   HTTPMessage& message, HTTPReply& reply) anope_override
 	{
-		Anope::string client_id, client_ip;
-		client_id = message.post_data["client_id"];
-		client_ip = client->GetIP();
+		APIRequest request(message, client->GetIP());
 
-		if (client_id.empty() || client_ip.empty())
+		if (!request.IsValid())
 		{
 			reply.error = HTTP_BAD_REQUEST;
 			return true;
 		}
 
-		Log(LOG_NORMAL, this->GetEndpointID()) << "API: " << GetEndpointID() << ": Request received from " << client_id
-											   << " on " << client_ip;
+		JsonArray missing;
+
+		for (RequiredParams::const_iterator it = required_params.begin(); it != required_params.end(); ++it)
+		{
+			if (!request.HasParameter(*it))
+				missing.push_back(*it);
+		}
+
+		if (!missing.empty())
+		{
+			reply.error = HTTP_BAD_REQUEST;
+
+			JsonObject error;
+			error["id"] = "missing_parameters";
+			error["message"] = "Missing required request parameters";
+			error["parameters"] = missing;
+
+			JsonObject responseObj;
+			responseObj["status"] = "error";
+			responseObj["error"] = error;
+
+			reply.Write(responseObj.str());
+			return true;
+		}
+
+		Log(LOG_NORMAL, this->GetEndpointID()) << "API: " << GetEndpointID() << ": Request received from "
+											   << request.getClientId() << " on " << request.getClientIp();
 
 		return HandleRequest(provider, string, client, message, reply);
 	}
