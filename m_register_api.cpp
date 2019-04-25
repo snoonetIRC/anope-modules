@@ -1,6 +1,7 @@
 #include "module.h"
 #include "modules/httpd.h"
 #include "json_api.h"
+#include "mail_template.h"
 
 #define GUEST_SUFFIX_LENGTH 7
 #define STRICT_PASS_LENGTH 5
@@ -157,63 +158,6 @@ struct Session
 	bool IsValid() const
 	{
 		return (lastused + lifetime) >= Anope::CurTime;
-	}
-};
-
-typedef Anope::string MessageT;
-
-class EmailMessage
-{
-	MessageT subject;
-	MessageT message;
-
- public:
-	EmailMessage(const NickCoreRef& nc, const MessageT& Subject, const MessageT& Message)
-		: subject(Language::Translate(nc, Subject.c_str()))
-		, message(Language::Translate(nc, Message.c_str()))
-	{
-	}
-
-	void SetVariable(const Anope::string& Name, const Anope::string& value)
-	{
-		subject = subject.replace_all_cs(Name, value);
-		message = message.replace_all_cs(Name, value);
-	}
-
-	MessageT GetSubject()
-	{
-		return subject;
-	}
-
-	MessageT GetBody()
-	{
-		return message;
-	}
-};
-
-class EmailTemplate
-{
- private:
-	Anope::string name;
-	MessageT subject;
-	MessageT message;
-
- public:
-	EmailTemplate(const Anope::string& Name)
-		: name(Name)
-	{
-	}
-
-	EmailMessage MakeMessage(const NickCoreRef& nc) const
-	{
-		return EmailMessage(nc, subject, message);
-	}
-
-	void DoReload(Configuration::Conf* conf)
-	{
-		Configuration::Block* mailblock = conf->GetBlock("mail");
-		subject = mailblock->Get<const MessageT>(name + "_subject");
-		message = mailblock->Get<const MessageT>(name + "_message");
 	}
 };
 
