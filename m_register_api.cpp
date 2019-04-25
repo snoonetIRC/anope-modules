@@ -17,12 +17,14 @@ class APIRequest
  private:
 	const Anope::string client_id;
 	const ip_t client_ip;
+	const ip_t user_ip;
 
  public:
 	APIRequest(const APIRequest& other)
 		: HTTPMessage(other)
 		, client_id(other.client_id)
 		, client_ip(other.client_ip)
+		, user_ip(other.user_ip)
 	{
 	}
 
@@ -30,6 +32,7 @@ class APIRequest
 		: HTTPMessage(message)
 		, client_id(GetParameter("client_id"))
 		, client_ip(ClientIP)
+		, user_ip(GetParameter("user_ip"))
 	{
 	}
 
@@ -45,6 +48,11 @@ class APIRequest
 	const ip_t& getClientIp() const
 	{
 		return client_ip;
+	}
+
+	const ip_t& getUserIp() const
+	{
+		return user_ip;
 	}
 
 	bool IsValid() const
@@ -91,7 +99,7 @@ struct RegisterData
 		RegisterData data;
 		data.username = request.GetParameter("username");
 		data.ident = request.GetParameter("ident");
-		data.ip = request.GetParameter("ip");
+		data.ip = request.getUserIp();
 		data.email = request.GetParameter("email");
 		data.password = request.GetParameter("password");
 		data.source = request.GetParameter("source");
@@ -175,7 +183,12 @@ class APILogger
 		: Log(LOG_NORMAL, endpoint.GetURL().substr(1))
 	{
 		*this << "API: " << category << " from " << request.getClientId()
-			  << " on " << request.getClientIp() << ": ";
+			  << " on " << request.getClientIp();
+
+		if (!request.getUserIp().empty())
+			*this << " (user: " << request.getUserIp() << ")";
+
+		*this << ": ";
 	}
 };
 
@@ -388,6 +401,7 @@ class RegistrationEndpoint
 		AddRequiredParam("username");
 		AddRequiredParam("password");
 		AddRequiredParam("source");
+		AddRequiredParam("user_ip");
 
 		if (forceemail)
 			AddRequiredParam("email");
@@ -474,6 +488,7 @@ class ConfirmEndpoint
 	{
 		AddRequiredParam("session");
 		AddRequiredParam("code");
+		AddRequiredParam("user_ip");
 	}
 
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
@@ -587,6 +602,7 @@ class LoginEndpoint
 	{
 		AddRequiredParam("username");
 		AddRequiredParam("password");
+		AddRequiredParam("user_ip");
 	}
 
 	bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client, APIRequest& request,
