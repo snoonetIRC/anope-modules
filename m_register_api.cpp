@@ -511,6 +511,8 @@ class ConfirmEndpoint
 			return false;
 		}
 
+		APILogger(*this, request) << "Account confirmed: " << nc->display;
+
 		unconfirmedExt->Unset(nc);
 		passcodeExt->Unset(nc);
 		return true;
@@ -523,13 +525,17 @@ class APIIndentifyRequest
  private:
 	HTTPReply reply;
 	HTTPClientRef client;
+	APIRequest request;
+	APIEndpoint* endpoint;
 
  public:
 	APIIndentifyRequest(Module* o, const Anope::string& acc, const Anope::string& pass, HTTPReply& Reply,
-						const HTTPClientRef& Client)
+						const HTTPClientRef& Client, const APIRequest& Request, APIEndpoint* Endpoint)
 		: IdentifyRequest(o, acc, pass)
 		, reply(Reply)
 		, client(Client)
+		, request(Request)
+		, endpoint(Endpoint)
 	{
 	}
 
@@ -548,6 +554,8 @@ class APIIndentifyRequest
 		obj["account"] = na->nc->display;
 		obj["status"] = "ok";
 
+		APILogger(*endpoint, request) << "Account login: " << na->nc->display;
+
 		OnResult(obj);
 	}
 
@@ -559,6 +567,8 @@ class APIIndentifyRequest
 
 		obj["error"] = error;
 		obj["status"] = "error";
+
+		APILogger(*endpoint, request) << "Failed account login: " << GetAccount();
 
 		OnResult(obj);
 	}
@@ -587,7 +597,7 @@ class LoginEndpoint
 		user = request.GetParameter("username");
 		password = request.GetParameter("password");
 
-		APIIndentifyRequest* req = new APIIndentifyRequest(owner, user, password, reply, client);
+		APIIndentifyRequest* req = new APIIndentifyRequest(owner, user, password, reply, client, request, this);
 		FOREACH_MOD(OnCheckAuthentication, (NULL, req));
 		req->Dispatch();
 		return false;
@@ -615,6 +625,8 @@ class LogoutEndpoint
 			errorObject["message"] = "You are not logged in to an account";
 			return false;
 		}
+
+		APILogger(*this, request) << "Session logout for account: " << session->Account()->display;
 
 		session->Invalidate();
 		return true;
