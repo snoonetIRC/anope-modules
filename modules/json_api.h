@@ -141,6 +141,15 @@ class JsonValue
 		*this = other;
 	}
 
+
+	template<typename T>
+	JsonValue(const T& value)
+		: type(JSON_NULL)
+		, object(NULL)
+	{
+		*this = value;
+	}
+
 	JsonValue& operator=(const JsonValue& other)
 	{
 		this->SetType(other.type);
