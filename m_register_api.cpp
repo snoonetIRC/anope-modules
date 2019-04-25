@@ -99,8 +99,9 @@ struct Session
 		if (obj)
 			session = anope_dynamic_static_cast<Session*>(obj);
 		else
-			session = new Session(nc);
+			session = new Session(NULL);
 
+		session->nc = nc;
 		data["id"] >> session->id;
 
 		SESS_FIELDS(INT_FIELD_UNSER)
