@@ -369,6 +369,9 @@ class RegistrationEndpoint
 		if (strictpasswords && data.password.length() < STRICT_PASS_LENGTH)
 			return false;
 
+		if (data.password.find(' ') != Anope::string::npos)
+			return false;
+
 		return true;
 	}
 
