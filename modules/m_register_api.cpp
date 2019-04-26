@@ -466,7 +466,7 @@ class RegistrationEndpoint
 
 		FOREACH_MOD(OnNickRegister, (NULL, na, data.password));
 
-		if (!(data.ip.empty() || data.ident.empty()) && accessonreg)
+		if (!data.ip.empty() && !data.ident.empty() && accessonreg)
 			nc->AddAccess(data.ident + "@" + data.ip);
 
 		SessionRef session = new Session(nc);
