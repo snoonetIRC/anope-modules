@@ -4,12 +4,19 @@ Each endpoint takes form encoded data and returns a JSON response.
 
 Each endpoint requires an API key from Snoonet Staff to access.
 
+Every endpoint accepts an optional `user_ip` parameter to specify the IP address of the user the action is being done on behalf of. Some endpoints require this parameter.
+
+### Generic Errors
+
+`{"error":{"id":"missing_parameters","message":"Missing required request parameters","parameters":[<MISSING_PARAMS>]},"status":"error"}` - Occurs when a required parameter is not supplied for this request
+
 ### `/api/register` - Register an account
-#### Params
+#### Params (required unless specified otherwise)
 - `username` - Username of the account to register
 - `password` - Password to register the accouht with
-- `email` - The email address to associate with this account
+- `email` _optional if forceemail=false in anope_ - The email address to associate with this account
 - `source` -  A string identifying where the user is registering from, for `m_store_server`
+- `user_ip` - The IP address of the user creating this account
 
 #### Responses
 ##### Success
@@ -37,9 +44,10 @@ Each endpoint requires an API key from Snoonet Staff to access.
 `{"error":{"id":"invalid_password","message":"That password is invalid"},"status":"error"}`
 
 ### `/api/confirm` - Confirm an account registration
-#### Params
+#### Params (required unless otherwise specified)
 - `session` - The `session` ID returned from the `/api/register` call
 - `code` - The user's verification code for their account
+- `user_ip` - The IP address of the user confirming this account
 
 #### Responses
 ##### Success
@@ -55,9 +63,10 @@ Each endpoint requires an API key from Snoonet Staff to access.
 `{"error":{"id":"wrong_code","message":"Incorrect confirmation code supplied"},"status":"error"}`
 
 ### `/api/login` - Begin a session for a user
-#### Params
+#### Params (required unless otherwise specified)
 - `username` - The user's username
 - `password` - The user's password
+- `user_ip` - The IP address of the user logging in
 
 #### Responses
 ##### Success
