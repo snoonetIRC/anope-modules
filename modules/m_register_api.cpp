@@ -244,6 +244,9 @@ class RegistrationEndpoint
 
 	bool SendRegmail(const NickAliasRef& na)
 	{
+		if (!passcodeExt)
+			return false;
+
 		NickCoreRef nc = na->nc;
 
 		Anope::string* code = passcodeExt->Get(nc);
@@ -452,18 +455,22 @@ class RegistrationEndpoint
 		APILogger(*this, request) << "Account created: " << nc->display
 								  << " (email: " << emailStr << ")";
 
-		regserverExt->Set(nc, data.source);
+		if (regserverExt)
+			regserverExt->Set(nc, data.source);
 
-		if (nsregister.equals_ci("admin"))
+		if (unconfirmedExt && passcodeExt)
 		{
-			unconfirmedExt->Set(nc);
-		}
-		else if (nsregister.equals_ci("mail"))
-		{
-			if (!data.email.empty())
+			if (nsregister.equals_ci("admin"))
 			{
 				unconfirmedExt->Set(nc);
-				SendRegmail(na);
+			}
+			else if (nsregister.equals_ci("mail"))
+			{
+				if (!data.email.empty())
+				{
+					unconfirmedExt->Set(nc);
+					SendRegmail(na);
+				}
 			}
 		}
 
@@ -475,7 +482,7 @@ class RegistrationEndpoint
 		SessionRef session = new Session(nc);
 
 		responseObject["session"] = session->id;
-		if (unconfirmedExt->Get(nc))
+		if (unconfirmedExt && unconfirmedExt->Get(nc))
 		{
 			responseObject["verify"] = nsregister;
 		}
@@ -499,6 +506,13 @@ class ConfirmEndpoint
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
 		Anope::string code, session_id;
+
+		if (!unconfirmedExt || !passcodeExt)
+		{
+			errorObject["id"] = "no_confirm";
+			errorObject["message"] = "Account confirnmation is disabled.";
+			return false;
+		}
 
 		code = request.GetParameter("code");
 		session_id = request.GetParameter("session");
