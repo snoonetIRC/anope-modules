@@ -565,6 +565,9 @@ class APIIndentifyRequest
 	void OnSuccess() anope_override
 	{
 		NickAliasRef na = NickAlias::Find(GetAccount());
+		if (!na)
+			return OnFail();
+
 		SessionRef session = new Session(na->nc);
 		JsonObject obj;
 		obj["session"] = session->id;
