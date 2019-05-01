@@ -17,6 +17,7 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 - `email` _optional if forceemail=false in anope_ - The email address to associate with this account
 - `source` -  A string identifying where the user is registering from, for `m_store_server`
 - `user_ip` - The IP address of the user creating this account
+- `ident` _optional_ - If specified, is used to populate the default access list for the new account
 
 #### Responses
 ##### Success
