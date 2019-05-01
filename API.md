@@ -71,7 +71,7 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 #### Responses
 ##### Success
 
-`{"session":"<SESSION_ID>","account":"<ACCOUNT_NAME>","status":"ok"}`
+`{"session":"<SESSION_ID>","account":"<ACCOUNT_NAME>","status":"ok","unconfirmed":true|false}`
 
 ##### Errors
 

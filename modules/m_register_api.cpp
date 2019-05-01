@@ -590,6 +590,7 @@ class APIIndentifyRequest
 		obj["session"] = session->id;
 		obj["account"] = na->nc->display;
 		obj["status"] = "ok";
+		obj["unconfirmed"] = unconfirmedExt && unconfirmedExt->HasExt(na->nc);
 
 		APILogger(*endpoint, request) << "Account login: " << na->nc->display;
 
