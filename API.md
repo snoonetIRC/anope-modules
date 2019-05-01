@@ -10,7 +10,7 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 
 `{"error":{"id":"missing_parameters","message":"Missing required request parameters","parameters":[<MISSING_PARAMS>]},"status":"error"}` - Occurs when a required parameter is not supplied for this request
 
-### `/api/register` - Register an account
+### `/register` - Register an account
 #### Params (required unless specified otherwise)
 - `username` - Username of the account to register
 - `password` - Password to register the accouht with
@@ -25,7 +25,7 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 - `VERIFY_TYPE` may be `mail`, `admin`, or `none`. This indicates the account verification method that is configured.
 
 ##### Errors
-    _Note: The `message` field is meant only to describe the error to a user, this text may change unexpectedly_
+_Note: The `message` field is meant only to describe the error to a user, this text may change unexpectedly_
 
 
 `{"error":{"id":"name_in_use","message":"This username is in use by another user and can not be registered"},"status":"error"}`
@@ -42,7 +42,7 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 
 `{"error":{"id":"invalid_password","message":"That password is invalid"},"status":"error"}`
 
-### `/api/confirm` - Confirm an account registration
+### `/confirm` - Confirm an account registration
 #### Params (required unless otherwise specified)
 - `session` - The `session` ID returned from the `/api/register` call
 - `code` - The user's verification code for their account
@@ -61,7 +61,7 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 
 `{"error":{"id":"wrong_code","message":"Incorrect confirmation code supplied"},"status":"error"}`
 
-### `/api/login` - Begin a session for a user
+### `/login` - Begin a session for a user
 #### Params (required unless otherwise specified)
 - `username` - The user's username
 - `password` - The user's password
@@ -76,7 +76,7 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 
 `{"error":{"id":"failed_login","message":"Invalid login credentials"},"status":"error"}`
 
-### `/api/logout` - Terminate a session
+### `/logout` - Terminate a session
 #### Params
 - `session` - The session to terminate
 
