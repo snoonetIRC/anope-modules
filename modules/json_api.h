@@ -141,7 +141,6 @@ class JsonValue
 		*this = other;
 	}
 
-
 	template<typename T>
 	JsonValue(const T& value)
 		: type(JSON_NULL)
