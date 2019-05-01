@@ -471,12 +471,12 @@ class RegistrationEndpoint
 		if (unconfirmedExt && unconfirmedExt->HasExt(nc))
 		{
 			responseObject["verify"] = nsregister;
-			responseObject["need_confirm"] = true;
+			responseObject["need_verify"] = true;
 		}
 		else
 		{
 			responseObject["verify"] = "none";
-			responseObject["need_confirm"] = false;
+			responseObject["need_verify"] = false;
 		}
 
 		return true;
@@ -602,7 +602,7 @@ class APIIndentifyRequest
 		obj["session"] = session->id;
 		obj["account"] = na->nc->display;
 		obj["status"] = "ok";
-		obj["unconfirmed"] = unconfirmedExt && unconfirmedExt->HasExt(na->nc);
+		obj["verified"] = !unconfirmedExt || !unconfirmedExt->HasExt(na->nc);
 
 		APILogger(*endpoint, request) << "Account login: " << na->nc->display;
 
