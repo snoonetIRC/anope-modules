@@ -21,9 +21,8 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 #### Responses
 ##### Success
 
-`{"session":"<SESSION_ID>","status":"ok","verify":"<VERIFY_TYPE>"}`
-    
-    - `VERIFY_TYPE` may be `mail` or `admin`, or it may be absent. This indicates the account verification method that is configured.
+`{"session":"<SESSION_ID>","status":"ok","verify":"<VERIFY_TYPE>","need_confirm": true|false}`
+- `VERIFY_TYPE` may be `mail`, `admin`, or `none`. This indicates the account verification method that is configured.
 
 ##### Errors
     _Note: The `message` field is meant only to describe the error to a user, this text may change unexpectedly_

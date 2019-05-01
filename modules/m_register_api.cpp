@@ -482,9 +482,15 @@ class RegistrationEndpoint
 		SessionRef session = new Session(nc);
 
 		responseObject["session"] = session->id;
-		if (unconfirmedExt && unconfirmedExt->Get(nc))
+		if (unconfirmedExt && unconfirmedExt->HasExt(nc))
 		{
 			responseObject["verify"] = nsregister;
+			responseObject["need_confirm"] = true;
+		}
+		else
+		{
+			responseObject["verify"] = "none";
+			responseObject["need_confirm"] = false;
 		}
 
 		return true;
