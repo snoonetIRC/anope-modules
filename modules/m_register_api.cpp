@@ -458,21 +458,7 @@ class RegistrationEndpoint
 		if (regserverExt)
 			regserverExt->Set(nc, data.source);
 
-		if (unconfirmedExt && passcodeExt)
-		{
-			if (nsregister.equals_ci("admin"))
-			{
-				unconfirmedExt->Set(nc);
-			}
-			else if (nsregister.equals_ci("mail"))
-			{
-				if (!data.email.empty())
-				{
-					unconfirmedExt->Set(nc);
-					SendRegmail(na);
-				}
-			}
-		}
+		DoConfirm(na, data);
 
 		FOREACH_MOD(OnNickRegister, (NULL, na, data.password));
 
@@ -494,6 +480,26 @@ class RegistrationEndpoint
 		}
 
 		return true;
+	}
+
+ private:
+	void DoConfirm(NickAlias* na, const RegisterData& data)
+	{
+		if (!unconfirmedExt || !passcodeExt)
+			return;
+
+		if (nsregister.equals_ci("admin"))
+		{
+			unconfirmedExt->Set(na->nc);
+		}
+		else if (nsregister.equals_ci("mail"))
+		{
+			if (!data.email.empty())
+			{
+				unconfirmedExt->Set(na->nc);
+				SendRegmail(na);
+			}
+		}
 	}
 };
 
