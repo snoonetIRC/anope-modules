@@ -9,6 +9,8 @@
 #define REG_CONFIRM_LEN 9
 #define RESET_CONFIRM_LEN 20
 
+#define DEFAULT_PASS_LEN 32
+
 class APIRequest
 	: public HTTPMessage
 {
@@ -120,7 +122,7 @@ struct PasswordChecker
 
 	PasswordChecker()
 		: strictpasswords(true)
-		, passlen(32)
+		, passlen(DEFAULT_PASS_LEN)
 	{
 	}
 
@@ -145,7 +147,7 @@ struct PasswordChecker
 	{
 		Configuration::Block* nickserv = conf->GetModule("nickserv");
 
-		passlen = nickserv->Get<unsigned>("passlen", "32");
+		passlen = nickserv->Get<unsigned>("passlen", stringify(DEFAULT_PASS_LEN));
 
 		strictpasswords = conf->GetBlock("options")->Get<bool>("strictpasswords");
 	}
