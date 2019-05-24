@@ -14,7 +14,6 @@ class APIRequest
 {
  public:
 	typedef std::map<Anope::string, Anope::string> ParamMap;
-	typedef ParamMap::mapped_type data_value_type;
 	typedef Anope::string ip_t;
 
  private:
