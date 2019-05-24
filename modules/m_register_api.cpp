@@ -280,7 +280,6 @@ class RegistrationEndpoint
 
 	Anope::string nsregister;
 	Anope::string guestnick;
-	Anope::string network;
 
 	EmailTemplate regmail;
 
@@ -298,10 +297,8 @@ class RegistrationEndpoint
 			*code = Anope::Random(9);
 		}
 
-		EmailMessage msg = regmail.MakeMessage(nc);
+		EmailMessage msg = regmail.MakeMessage(na);
 
-		msg.SetVariable("%n", na->nick);
-		msg.SetVariable("%N", network);
 		msg.SetVariable("%c", *code);
 
 		return Mail::Send(nc, msg.GetSubject(), msg.GetBody());
@@ -449,8 +446,6 @@ class RegistrationEndpoint
 		nsregister = conf->GetModule("ns_register")->Get<const Anope::string>("registration");
 
 		accessonreg = conf->GetModule("ns_access")->Get<bool>("addaccessonreg");
-
-		network = conf->GetBlock("networkinfo")->Get<const Anope::string>("networkname");
 
 		regmail.DoReload(conf);
 		passcheck.DoReload(conf);
@@ -709,7 +704,6 @@ class ResetPassEndpoint
 	: public BasicAPIEndpoint
 {
 	EmailTemplate resetmail;
-	Anope::string network;
 
 	bool SendResetmail(const NickAliasRef& na)
 	{
@@ -722,10 +716,8 @@ class ResetPassEndpoint
 		ri->first = Anope::Random(20);
 		ri->second = Anope::CurTime;
 
-		EmailMessage msg = resetmail.MakeMessage(nc);
+		EmailMessage msg = resetmail.MakeMessage(na);
 
-		msg.SetVariable("%n", na->nick);
-		msg.SetVariable("%N", network);
 		msg.SetVariable("%c", ri->first);
 
 		return Mail::Send(nc, msg.GetSubject(), msg.GetBody());
@@ -742,7 +734,6 @@ class ResetPassEndpoint
 
 	void DoReload(Configuration::Conf* conf) anope_override
 	{
-		network = conf->GetBlock("networkinfo")->Get<const Anope::string>("networkname");
 		resetmail.DoReload(conf);
 	}
 
