@@ -31,7 +31,7 @@ class APIRequest
 	{
 	}
 
-	explicit APIRequest(const HTTPMessage& message, const ip_t& ClientIP)
+	APIRequest(const HTTPMessage& message, const ip_t& ClientIP)
 		: HTTPMessage(message)
 		, client_id(GetParameter("client_id"))
 		, client_ip(ClientIP)
@@ -41,10 +41,6 @@ class APIRequest
 
 		if (GetParameter("session", session_id))
 			session = Session::Find(session_id, true, true);
-	}
-
-	virtual ~APIRequest()
-	{
 	}
 
 	const Anope::string& getClientId() const
@@ -366,11 +362,11 @@ class RegistrationEndpoint
 			// Nick is shorter than the shortest possible guest nick
 			return false;
 
-		if (nick.substr(0, guestlen) != guestnick)
+		if (nick.substr(0, guestlen).equals_ci(guestnick))
 			// Nick doesn't start with the guest prefix
 			return false;
 
-		if (nick.substr(guestnick.length()).find_first_not_of("1234567890") != Anope::string::npos)
+		if (nick.substr(guestlen).find_first_not_of("1234567890") != Anope::string::npos)
 			// Nick contains non-digits after guest prefix
 			return false;
 
@@ -572,7 +568,7 @@ class ConfirmEndpoint
 		if (!unconfirmedExt || !passcodeExt)
 		{
 			errorObject["id"] = "no_confirm";
-			errorObject["message"] = "Account confirnmation is disabled.";
+			errorObject["message"] = "Account confirmation is disabled.";
 			return false;
 		}
 
