@@ -158,16 +158,19 @@ class APIEndpoint
 {
 	typedef std::set<Anope::string> RequiredParams;
 	RequiredParams required_params;
+	bool need_login;
 
  public:
 	APIEndpoint(const Anope::string& u)
 		: JsonAPIEndpoint(u)
+		, need_login(false)
 	{
 	}
 
 	void RequireSession()
 	{
 		AddRequiredParam("session");
+		need_login = true;
 	}
 
 	void AddRequiredParam(const Anope::string& name)
@@ -184,6 +187,24 @@ class APIEndpoint
 				   HTTPMessage& message, HTTPReply& reply) anope_override
 	{
 		APIRequest request(message, client->GetIP());
+
+		bool logged_in = request.session && request.session->LoggedIn();
+
+		if (need_login && !logged_in)
+		{
+			reply.error = HTTP_BAD_REQUEST;
+
+			JsonObject error;
+			error["id"] = "no_login";
+			error["message"] = "Login required";
+
+			JsonObject responseObj;
+			responseObj["status"] = "error";
+			responseObj["error"] = error;
+
+			reply.Write(responseObj.str());
+			return true;
+		}
 
 		if (!request.IsValid())
 		{
@@ -557,16 +578,7 @@ class ConfirmEndpoint
 
 		code = request.GetParameter("code");
 
-		SessionRef session = request.session;
-
-		if (!session || !session->LoggedIn())
-		{
-			errorObject["id"] = "no_login";
-			errorObject["message"] = "You are not logged in to an account";
-			return false;
-		}
-
-		NickCoreRef nc = session->Account();
+		NickCoreRef nc = request.session->Account();
 
 		if (!unconfirmedExt->HasExt(nc))
 		{
@@ -695,12 +707,6 @@ class LogoutEndpoint
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
 		SessionRef session = request.session;
-		if (!session || !session->LoggedIn())
-		{
-			errorObject["id"] = "no_login";
-			errorObject["message"] = "You are not logged in to an account";
-			return false;
-		}
 
 		APILogger(*this, request) << "Session logout for account: " << session->Account()->display;
 
@@ -815,16 +821,8 @@ class ResetConfirmEndpoint
 
 		NickCore* nc = na->nc;
 
-		if (!resetExt)
-		{
-			errorObject["id"] = "wrong_code";
-			errorObject["message"] = "Invalid reset token";
-			return false;
-		}
-
-		ResetInfo* ri = resetExt->Get(nc);
-
-		if (!ri || ri->first != code)
+		ResetInfo* ri;
+		if (!(resetExt && (ri = resetExt->Get(nc)) && ri->first == code))
 		{
 			errorObject["id"] = "wrong_code";
 			errorObject["message"] = "Invalid reset token";
@@ -888,12 +886,6 @@ class SetPasswordEndpoint
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
 		SessionRef session = request.session;
-		if (!session || !session->LoggedIn())
-		{
-			errorObject["id"] = "no_login";
-			errorObject["message"] = "You are not logged in to an account";
-			return false;
-		}
 
 		Anope::string password = request.GetParameter("newpass");
 		NickCore* nc = session->Account();
