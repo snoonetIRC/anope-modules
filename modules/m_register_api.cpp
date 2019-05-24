@@ -6,12 +6,15 @@
 
 #define GUEST_SUFFIX_LENGTH 7
 #define STRICT_PASS_LENGTH 5
+#define REG_CONFIRM_LEN 9
+#define RESET_CONFIRM_LEN 20
 
 class APIRequest
 	: public HTTPMessage
 {
  public:
-	typedef Anope::string data_value_type;
+	typedef std::map<Anope::string, Anope::string> ParamMap;
+	typedef ParamMap::mapped_type data_value_type;
 	typedef Anope::string ip_t;
 
  private:
@@ -63,14 +66,14 @@ class APIRequest
 		return !(client_id.empty() || client_ip.empty());
 	}
 
-	bool HasParameter(const Anope::string& name) const
+	bool HasParameter(const ParamMap::key_type& name) const
 	{
 		return post_data.find(name) != post_data.end();
 	}
 
-	bool GetParameter(const Anope::string& name, data_value_type& value) const
+	bool GetParameter(const ParamMap::key_type& name, ParamMap::mapped_type& value) const
 	{
-		std::map<Anope::string, Anope::string>::const_iterator it = post_data.find(name);
+		ParamMap::const_iterator it = post_data.find(name);
 
 		if (it == post_data.end())
 			return false;
@@ -80,9 +83,9 @@ class APIRequest
 		return true;
 	}
 
-	data_value_type GetParameter(const Anope::string& name) const
+	ParamMap::mapped_type GetParameter(const ParamMap::key_type& name) const
 	{
-		data_value_type value;
+		ParamMap::mapped_type value;
 		GetParameter(name, value);
 		return value;
 	}
@@ -328,7 +331,7 @@ class RegistrationEndpoint
 		if (!code)
 		{
 			code = passcodeExt->Set(nc);
-			*code = Anope::Random(9);
+			*code = Anope::Random(REG_CONFIRM_LEN);
 		}
 
 		EmailMessage msg = regmail.MakeMessage(na);
@@ -720,7 +723,7 @@ class ResetPassEndpoint
 		NickCoreRef nc = na->nc;
 
 		ResetInfo* ri = resetinfo.Require(nc);
-		ri->first = Anope::Random(20);
+		ri->first = Anope::Random(RESET_CONFIRM_LEN);
 		ri->second = Anope::CurTime;
 
 		EmailMessage msg = resetmail.MakeMessage(na);
@@ -931,7 +934,8 @@ class RegisterApiModule
 	ResetConfirmEndpoint resetconfirm;
 	SetPasswordEndpoint setpass;
 
-	std::vector<APIEndpoint*> pages;
+	typedef std::vector<APIEndpoint*> PageList;
+	PageList pages;
 
  public:
 	RegisterApiModule(const Anope::string& modname, const Anope::string& creator)
@@ -962,7 +966,7 @@ class RegisterApiModule
 		if (!httpd)
 			return;
 
-		for (std::vector<APIEndpoint*>::iterator it = pages.begin(); it != pages.end(); ++it)
+		for (PageList::iterator it = pages.begin(); it != pages.end(); ++it)
 			httpd->RegisterPage(*it);
 	}
 
@@ -971,7 +975,7 @@ class RegisterApiModule
 		if (!httpd)
 			return;
 
-		for (std::vector<APIEndpoint*>::iterator it = pages.begin(); it != pages.end(); ++it)
+		for (PageList::iterator it = pages.begin(); it != pages.end(); ++it)
 			httpd->UnregisterPage(*it);
 	}
 
@@ -995,7 +999,7 @@ class RegisterApiModule
 
 		RegisterPages();
 
-		for (std::vector<APIEndpoint*>::iterator it = pages.begin(); it != pages.end(); ++it)
+		for (PageList::iterator it = pages.begin(); it != pages.end(); ++it)
 			(*it)->DoReload(conf);
 	}
 };
