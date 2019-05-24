@@ -157,9 +157,12 @@ class APIEndpoint
 	bool need_login;
 
  public:
-	APIEndpoint(const Anope::string& u)
+	Module* creator;
+
+	APIEndpoint(Module* Creator, const Anope::string& u)
 		: JsonAPIEndpoint(u)
 		, need_login(false)
+		, creator(Creator)
 	{
 	}
 
@@ -268,8 +271,8 @@ class BasicAPIEndpoint
 	: public APIEndpoint
 {
  public:
-	BasicAPIEndpoint(const Anope::string& u)
-		: APIEndpoint(u)
+	BasicAPIEndpoint(Module* Creator, const Anope::string& u)
+		: APIEndpoint(Creator, u)
 	{
 	}
 
@@ -450,8 +453,8 @@ class RegistrationEndpoint
 	}
 
  public:
-	RegistrationEndpoint()
-		: BasicAPIEndpoint("register")
+	RegistrationEndpoint(Module* Creator)
+		: BasicAPIEndpoint(Creator, "register")
 		, restrictopernicks(true)
 		, forceemail(true)
 		, accessonreg(true)
@@ -553,8 +556,8 @@ class ConfirmEndpoint
 	: public BasicAPIEndpoint
 {
  public:
-	ConfirmEndpoint()
-		: BasicAPIEndpoint("confirm")
+	ConfirmEndpoint(Module* Creator)
+		: BasicAPIEndpoint(Creator, "confirm")
 	{
 		RequireSession();
 		AddRequiredParam("code");
@@ -662,13 +665,9 @@ class APIIndentifyRequest
 class LoginEndpoint
 	: public APIEndpoint
 {
- private:
-	Module* owner;
-
  public:
 	LoginEndpoint(Module* Owner)
-		: APIEndpoint("login")
-		, owner(Owner)
+		: APIEndpoint(Owner, "login")
 	{
 		AddRequiredParam("username");
 		AddRequiredParam("password");
@@ -683,7 +682,7 @@ class LoginEndpoint
 		user = request.GetParameter("username");
 		password = request.GetParameter("password");
 
-		APIIndentifyRequest* req = new APIIndentifyRequest(owner, user, password, reply, client, request, this);
+		APIIndentifyRequest* req = new APIIndentifyRequest(creator, user, password, reply, client, request, this);
 		FOREACH_MOD(OnCheckAuthentication, (NULL, req));
 		req->Dispatch();
 		return false;
@@ -694,8 +693,8 @@ class LogoutEndpoint
 	: public BasicAPIEndpoint
 {
  public:
-	LogoutEndpoint()
-		: BasicAPIEndpoint("logout")
+	LogoutEndpoint(Module* Creator)
+		: BasicAPIEndpoint(Creator, "logout")
 	{
 		RequireSession();
 	}
@@ -718,12 +717,9 @@ class ResetPassEndpoint
 
 	bool SendResetmail(const NickAliasRef& na)
 	{
-		if (!resetExt)
-			return false;
-
 		NickCoreRef nc = na->nc;
 
-		ResetInfo* ri = resetExt->Require(nc);
+		ResetInfo* ri = resetinfo.Require(nc);
 		ri->first = Anope::Random(20);
 		ri->second = Anope::CurTime;
 
@@ -735,9 +731,12 @@ class ResetPassEndpoint
 	}
 
  public:
-	ResetPassEndpoint()
-		: BasicAPIEndpoint("resetpass")
+	PrimitiveExtensibleItem<ResetInfo> resetinfo;
+
+	ResetPassEndpoint(Module* Creator)
+		: BasicAPIEndpoint(Creator, "resetpass")
 		, resetmail("reset")
+		, resetinfo(Creator, "reset_info")
 	{
 		AddRequiredParam("account");
 		AddRequiredParam("email");
@@ -790,8 +789,13 @@ class ResetConfirmEndpoint
 	PasswordChecker passcheck;
 
  public:
-	ResetConfirmEndpoint()
-		: BasicAPIEndpoint("resetpass/confirm")
+	SerializableExtensibleItem<bool> resetting;
+	PrimitiveExtensibleItem<ResetInfo>& resetinfo;
+
+	ResetConfirmEndpoint(Module* Creator, PrimitiveExtensibleItem<ResetInfo>& Resetinfo)
+		: BasicAPIEndpoint(Creator, "resetpass/confirm")
+		, resetting(Creator, "resetting_pass")
+		, resetinfo(Resetinfo)
 	{
 		AddRequiredParam("account");
 		AddRequiredParam("code");
@@ -818,7 +822,7 @@ class ResetConfirmEndpoint
 		NickCore* nc = na->nc;
 
 		ResetInfo* ri;
-		if (!(resetExt && (ri = resetExt->Get(nc)) && ri->first == code))
+		if (!((ri = resetinfo.Get(nc)) && ri->first == code))
 		{
 			errorObject["id"] = "wrong_code";
 			errorObject["message"] = "Invalid reset token";
@@ -832,7 +836,7 @@ class ResetConfirmEndpoint
 			return false;
 		}
 
-		resetExt->Unset(nc);
+		resetinfo.Unset(nc);
 
 		if (has_password)
 		{
@@ -849,7 +853,7 @@ class ResetConfirmEndpoint
 		else if (unconfirmedExt)
 		{
 			unconfirmedExt->Set(nc);
-			resettingExt->Set(nc);
+			resetting.Set(nc);
 			responseObject["password_set"] = false;
 		}
 
@@ -871,9 +875,11 @@ class SetPasswordEndpoint
 	: public BasicAPIEndpoint
 {
 	PasswordChecker passcheck;
+	SerializableExtensibleItem<bool>& resetting;
  public:
-	SetPasswordEndpoint()
-		: BasicAPIEndpoint("user/set/password")
+	SetPasswordEndpoint(Module* Creator, SerializableExtensibleItem<bool>& Resetting)
+		: BasicAPIEndpoint(Creator, "user/set/password")
+		, resetting(Resetting)
 	{
 		RequireSession();
 		AddRequiredParam("newpass");
@@ -895,9 +901,9 @@ class SetPasswordEndpoint
 
 		Anope::Encrypt(password, nc->pass);
 
-		if (resettingExt && resettingExt->HasExt(nc))
+		if (resetting.HasExt(nc))
 		{
-			resettingExt->Unset(nc);
+			resetting.Unset(nc);
 			if (unconfirmedExt)
 				unconfirmedExt->Unset(nc);
 		}
@@ -925,18 +931,19 @@ class RegisterApiModule
 	ResetConfirmEndpoint resetconfirm;
 	SetPasswordEndpoint setpass;
 
-	PrimitiveExtensibleItem<ResetInfo> resetinfo;
-	SerializableExtensibleItem<bool> resetting;
-
 	std::vector<APIEndpoint*> pages;
 
  public:
 	RegisterApiModule(const Anope::string& modname, const Anope::string& creator)
 		: Module(modname, creator, THIRD)
 		, session_type(SESSION_TYPE, Session::Unserialize)
+		, reg(this)
+		, confirm(this)
 		, login(this)
-		, resetinfo(this, "reset_info")
-		, resetting(this, "resetting_pass")
+		, logout(this)
+		, resetpass(this)
+		, resetconfirm(this, resetpass.resetinfo)
+		, setpass(this, resetconfirm.resetting)
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.2");
