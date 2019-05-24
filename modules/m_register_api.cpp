@@ -20,11 +20,14 @@ class APIRequest
 	const ip_t user_ip;
 
  public:
+	SessionRef session;
+
 	APIRequest(const APIRequest& other)
 		: HTTPMessage(other)
 		, client_id(other.client_id)
 		, client_ip(other.client_ip)
 		, user_ip(other.user_ip)
+		, session(other.session)
 	{
 	}
 
@@ -34,6 +37,10 @@ class APIRequest
 		, client_ip(ClientIP)
 		, user_ip(GetParameter("user_ip"))
 	{
+		Anope::string session_id;
+
+		if (GetParameter("session", session_id))
+			session = Session::Find(session_id, true, true);
 	}
 
 	virtual ~APIRequest()
@@ -158,6 +165,11 @@ class APIEndpoint
 	{
 	}
 
+	void RequireSession()
+	{
+		AddRequiredParam("session");
+	}
+
 	void AddRequiredParam(const Anope::string& name)
 	{
 		required_params.insert(name);
@@ -259,6 +271,8 @@ class BasicAPIEndpoint
 		else
 		{
 			responseObject["status"] = "ok";
+			if (request.session && request.session->Check())
+				responseObject["session"] = request.session->id;
 		}
 		reply.Write(responseObject.str());
 
@@ -481,9 +495,8 @@ class RegistrationEndpoint
 		if (!data.ip.empty() && !data.ident.empty() && accessonreg)
 			nc->AddAccess(data.ident + "@" + data.ip);
 
-		SessionRef session = new Session(nc);
+		request.session = new Session(nc);
 
-		responseObject["session"] = session->id;
 		if (unconfirmedExt && unconfirmedExt->HasExt(nc))
 		{
 			responseObject["verify"] = nsregister;
@@ -526,14 +539,14 @@ class ConfirmEndpoint
 	ConfirmEndpoint()
 		: BasicAPIEndpoint("confirm")
 	{
-		AddRequiredParam("session");
+		RequireSession();
 		AddRequiredParam("code");
 		AddRequiredParam("user_ip");
 	}
 
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
-		Anope::string code, session_id;
+		Anope::string code;
 
 		if (!unconfirmedExt || !passcodeExt)
 		{
@@ -543,17 +556,15 @@ class ConfirmEndpoint
 		}
 
 		code = request.GetParameter("code");
-		session_id = request.GetParameter("session");
 
-		SessionRef session = Session::Find(session_id);
+		SessionRef session = request.session;
+
 		if (!session || !session->LoggedIn())
 		{
 			errorObject["id"] = "no_login";
 			errorObject["message"] = "You are not logged in to an account";
 			return false;
 		}
-
-		responseObject["session"] = session->id;
 
 		NickCoreRef nc = session->Account();
 
@@ -678,14 +689,12 @@ class LogoutEndpoint
 	LogoutEndpoint()
 		: BasicAPIEndpoint("logout")
 	{
-		AddRequiredParam("session");
+		RequireSession();
 	}
 
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
-		Anope::string session_id = request.GetParameter("session");
-
-		SessionRef session = Session::Find(session_id);
+		SessionRef session = request.session;
 		if (!session || !session->LoggedIn())
 		{
 			errorObject["id"] = "no_login";
@@ -850,9 +859,8 @@ class ResetConfirmEndpoint
 			responseObject["password_set"] = false;
 		}
 
-		Session* session = new Session(nc);
+		request.session = new Session(nc);
 
-		responseObject["session"] = session->id;
 		responseObject["account"] = nc->display;
 		responseObject["verified"] = !unconfirmedExt || !unconfirmedExt->HasExt(nc);
 
@@ -873,15 +881,13 @@ class SetPasswordEndpoint
 	SetPasswordEndpoint()
 		: BasicAPIEndpoint("user/set/password")
 	{
-		AddRequiredParam("session");
+		RequireSession();
 		AddRequiredParam("newpass");
 	}
 
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
-		Anope::string session_id = request.GetParameter("session");
-
-		SessionRef session = Session::Find(session_id);
+		SessionRef session = request.session;
 		if (!session || !session->LoggedIn())
 		{
 			errorObject["id"] = "no_login";
