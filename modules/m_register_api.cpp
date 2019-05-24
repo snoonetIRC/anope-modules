@@ -107,6 +107,45 @@ struct RegisterData
 	}
 };
 
+struct PasswordChecker
+{
+	bool strictpasswords;
+
+	unsigned passlen;
+
+	PasswordChecker()
+		: strictpasswords(true)
+		, passlen(32)
+	{
+	}
+
+	bool Check(const Anope::string& username, const Anope::string& password) const
+	{
+		if (password.equals_ci(username))
+			return false;
+
+		if (password.length() > passlen)
+			return false;
+
+		if (strictpasswords && password.length() < STRICT_PASS_LENGTH)
+			return false;
+
+		if (password.find(' ') != Anope::string::npos)
+			return false;
+
+		return true;
+	}
+
+	void DoReload(Configuration::Conf* conf)
+	{
+		Configuration::Block* nickserv = conf->GetModule("nickserv");
+
+		passlen = nickserv->Get<unsigned>("passlen", "32");
+
+		strictpasswords = conf->GetBlock("options")->Get<bool>("strictpasswords");
+	}
+};
+
 class APIEndpoint
 	: public JsonAPIEndpoint
 {
@@ -173,6 +212,10 @@ class APIEndpoint
 
 	virtual bool HandleRequest(HTTPProvider* provider, const Anope::string& string, HTTPClient* client,
 							   APIRequest& request, HTTPReply& reply) = 0;
+
+	virtual void DoReload(Configuration::Conf* conf)
+	{
+	}
 };
 
 class APILogger
@@ -231,10 +274,9 @@ class RegistrationEndpoint
  private:
 	bool restrictopernicks;
 	bool forceemail;
-	bool strictpasswords;
 	bool accessonreg;
 
-	unsigned passlen;
+	PasswordChecker passcheck;
 
 	Anope::string nsregister;
 	Anope::string guestnick;
@@ -361,23 +403,6 @@ class RegistrationEndpoint
 		return true;
 	}
 
-	bool CheckPassword(const RegisterData& data, JsonObject& errorObject) const
-	{
-		if (data.password.equals_ci(data.username))
-			return false;
-
-		if (data.password.length() > passlen)
-			return false;
-
-		if (strictpasswords && data.password.length() < STRICT_PASS_LENGTH)
-			return false;
-
-		if (data.password.find(' ') != Anope::string::npos)
-			return false;
-
-		return true;
-	}
-
 	bool CheckRequest(const RegisterData& data, JsonObject& errorObject) const
 	{
 		if (!CheckUsername(data, errorObject))
@@ -386,7 +411,7 @@ class RegistrationEndpoint
 		if (!CheckEmail(data, errorObject))
 			return false;
 
-		if (!CheckPassword(data, errorObject))
+		if (!passcheck.Check(data.username, data.password))
 		{
 			errorObject["id"] = "invalid_password";
 			errorObject["message"] = "That password is invalid";
@@ -401,9 +426,7 @@ class RegistrationEndpoint
 		: BasicAPIEndpoint("register")
 		, restrictopernicks(true)
 		, forceemail(true)
-		, strictpasswords(true)
 		, accessonreg(true)
-		, passlen(32)
 		, regmail("registration")
 	{
 		AddRequiredParam("username");
@@ -415,16 +438,13 @@ class RegistrationEndpoint
 			AddRequiredParam("email");
 	}
 
-	void OnReload(Configuration::Conf* conf)
+	void DoReload(Configuration::Conf* conf) anope_override
 	{
 		Configuration::Block* nickserv = conf->GetModule("nickserv");
 
 		restrictopernicks = nickserv->Get<bool>("restrictopernicks");
 		forceemail = nickserv->Get<bool>("forceemail", "yes");
-		passlen = nickserv->Get<unsigned>("passlen", "32");
 		guestnick = nickserv->Get<const Anope::string>("guestnickprefix", "Guest");
-
-		strictpasswords = conf->GetBlock("options")->Get<bool>("strictpasswords");
 
 		nsregister = conf->GetModule("ns_register")->Get<const Anope::string>("registration");
 
@@ -433,6 +453,7 @@ class RegistrationEndpoint
 		network = conf->GetBlock("networkinfo")->Get<const Anope::string>("networkname");
 
 		regmail.DoReload(conf);
+		passcheck.DoReload(conf);
 	}
 
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
@@ -684,6 +705,227 @@ class LogoutEndpoint
 	}
 };
 
+class ResetPassEndpoint
+	: public BasicAPIEndpoint
+{
+	EmailTemplate resetmail;
+	Anope::string network;
+
+	bool SendResetmail(const NickAliasRef& na)
+	{
+		if (!resetExt)
+			return false;
+
+		NickCoreRef nc = na->nc;
+
+		ResetInfo* ri = resetExt->Require(nc);
+		ri->first = Anope::Random(20);
+		ri->second = Anope::CurTime;
+
+		EmailMessage msg = resetmail.MakeMessage(nc);
+
+		msg.SetVariable("%n", na->nick);
+		msg.SetVariable("%N", network);
+		msg.SetVariable("%c", ri->first);
+
+		return Mail::Send(nc, msg.GetSubject(), msg.GetBody());
+	}
+
+ public:
+	ResetPassEndpoint()
+		: BasicAPIEndpoint("resetpass")
+		, resetmail("reset")
+	{
+		AddRequiredParam("account");
+		AddRequiredParam("email");
+	}
+
+	void DoReload(Configuration::Conf* conf) anope_override
+	{
+		network = conf->GetBlock("networkinfo")->Get<const Anope::string>("networkname");
+		resetmail.DoReload(conf);
+	}
+
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	{
+		Anope::string account, email;
+
+		account = request.GetParameter("account");
+		email = request.GetParameter("email");
+
+		NickAlias* na = NickAlias::Find(account);
+
+		if (!na)
+		{
+			errorObject["id"] = "no_account";
+			errorObject["message"] = "Unable to find matching account";
+			return false;
+		}
+
+		NickCore* nc = na->nc;
+
+		if (!nc->email.equals_ci(email))
+		{
+			errorObject["id"] = "no_account";
+			errorObject["message"] = "Unable to find matching account";
+			return false;
+		}
+
+		if (!SendResetmail(na))
+		{
+			errorObject["id"] = "mail_failed";
+			errorObject["message"] = "Unable to send reset email";
+			return false;
+		}
+
+		return true;
+	}
+};
+
+class ResetConfirmEndpoint
+	: public BasicAPIEndpoint
+{
+	PasswordChecker passcheck;
+
+ public:
+	ResetConfirmEndpoint()
+		: BasicAPIEndpoint("resetpass/confirm")
+	{
+		AddRequiredParam("account");
+		AddRequiredParam("code");
+	}
+
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	{
+		Anope::string account, code, password;
+
+		account = request.GetParameter("account");
+		code = request.GetParameter("code");
+
+		bool has_password = request.GetParameter("newpass", password);
+
+		NickAlias* na = NickAlias::Find(account);
+
+		if (!na)
+		{
+			errorObject["id"] = "no_account";
+			errorObject["message"] = "Unable to find matching account";
+			return false;
+		}
+
+		NickCore* nc = na->nc;
+
+		if (!resetExt)
+		{
+			errorObject["id"] = "wrong_code";
+			errorObject["message"] = "Invalid reset token";
+			return false;
+		}
+
+		ResetInfo* ri = resetExt->Get(nc);
+
+		if (!ri || ri->first != code)
+		{
+			errorObject["id"] = "wrong_code";
+			errorObject["message"] = "Invalid reset token";
+			return false;
+		}
+
+		if (ri->second + 3600 < Anope::CurTime)
+		{
+			errorObject["id"] = "expired_code";
+			errorObject["message"] = "Expired reset token";
+			return false;
+		}
+
+		resetExt->Unset(nc);
+
+		if (has_password)
+		{
+			if (!passcheck.Check(nc->display, password))
+			{
+				errorObject["id"] = "invalid_password";
+				errorObject["message"] = "That password is invalid";
+				return false;
+			}
+
+			Anope::Encrypt(password, nc->pass);
+			responseObject["password_set"] = true;
+		}
+		else if (unconfirmedExt)
+		{
+			unconfirmedExt->Set(nc);
+			resettingExt->Set(nc);
+			responseObject["password_set"] = false;
+		}
+
+		Session* session = new Session(nc);
+
+		responseObject["session"] = session->id;
+		responseObject["account"] = nc->display;
+		responseObject["verified"] = !unconfirmedExt || !unconfirmedExt->HasExt(nc);
+
+		return true;
+	}
+
+	void DoReload(Configuration::Conf* conf) anope_override
+	{
+		passcheck.DoReload(conf);
+	}
+};
+
+class SetPasswordEndpoint
+	: public BasicAPIEndpoint
+{
+	PasswordChecker passcheck;
+ public:
+	SetPasswordEndpoint()
+		: BasicAPIEndpoint("user/set/password")
+	{
+		AddRequiredParam("session");
+		AddRequiredParam("newpass");
+	}
+
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	{
+		Anope::string session_id = request.GetParameter("session");
+
+		SessionRef session = Session::Find(session_id);
+		if (!session || !session->LoggedIn())
+		{
+			errorObject["id"] = "no_login";
+			errorObject["message"] = "You are not logged in to an account";
+			return false;
+		}
+
+		Anope::string password = request.GetParameter("newpass");
+		NickCore* nc = session->Account();
+
+		if (!passcheck.Check(nc->display, password))
+		{
+			errorObject["id"] = "invalid_password";
+			errorObject["message"] = "That password is invalid";
+			return false;
+		}
+
+		Anope::Encrypt(password, nc->pass);
+
+		if (resettingExt && resettingExt->HasExt(nc))
+		{
+			resettingExt->Unset(nc);
+			if (unconfirmedExt)
+				unconfirmedExt->Unset(nc);
+		}
+
+		return true;
+	}
+
+	void DoReload(Configuration::Conf* conf) anope_override
+	{
+		passcheck.DoReload(conf);
+	}
+};
+
 class RegisterApiModule
 	: public Module
 {
@@ -694,15 +936,33 @@ class RegisterApiModule
 	ConfirmEndpoint confirm;
 	LoginEndpoint login;
 	LogoutEndpoint logout;
+	ResetPassEndpoint resetpass;
+	ResetConfirmEndpoint resetconfirm;
+	SetPasswordEndpoint setpass;
+
+	PrimitiveExtensibleItem<ResetInfo> resetinfo;
+	SerializableExtensibleItem<bool> resetting;
+
+	std::vector<APIEndpoint*> pages;
 
  public:
 	RegisterApiModule(const Anope::string& modname, const Anope::string& creator)
 		: Module(modname, creator, THIRD)
 		, session_type(SESSION_TYPE, Session::Unserialize)
 		, login(this)
+		, resetinfo(this, "reset_info")
+		, resetting(this, "resetting_pass")
 	{
 		this->SetAuthor("linuxdaemon");
-		this->SetVersion("0.1");
+		this->SetVersion("0.2");
+
+		pages.push_back(&reg);
+		pages.push_back(&confirm);
+		pages.push_back(&login);
+		pages.push_back(&logout);
+		pages.push_back(&resetpass);
+		pages.push_back(&resetconfirm);
+		pages.push_back(&setpass);
 	}
 
 	void RegisterPages()
@@ -710,10 +970,8 @@ class RegisterApiModule
 		if (!httpd)
 			return;
 
-		httpd->RegisterPage(&reg);
-		httpd->RegisterPage(&confirm);
-		httpd->RegisterPage(&login);
-		httpd->RegisterPage(&logout);
+		for (std::vector<APIEndpoint*>::iterator it = pages.begin(); it != pages.end(); ++it)
+			httpd->RegisterPage(*it);
 	}
 
 	void UnregisterPages()
@@ -721,10 +979,8 @@ class RegisterApiModule
 		if (!httpd)
 			return;
 
-		httpd->UnregisterPage(&reg);
-		httpd->UnregisterPage(&confirm);
-		httpd->UnregisterPage(&login);
-		httpd->UnregisterPage(&logout);
+		for (std::vector<APIEndpoint*>::iterator it = pages.begin(); it != pages.end(); ++it)
+			httpd->UnregisterPage(*it);
 	}
 
 	~RegisterApiModule() anope_override
@@ -747,7 +1003,8 @@ class RegisterApiModule
 
 		RegisterPages();
 
-		reg.OnReload(conf);
+		for (std::vector<APIEndpoint*>::iterator it = pages.begin(); it != pages.end(); ++it)
+			(*it)->DoReload(conf);
 	}
 };
 
