@@ -612,13 +612,13 @@ class APIIndentifyRequest
 {
  private:
 	HTTPReply reply;
-	HTTPClientRef client;
+	Reference<HTTPClient> client;
 	APIRequest request;
 	APIEndpoint* endpoint;
 
  public:
 	APIIndentifyRequest(Module* o, const Anope::string& acc, const Anope::string& pass, HTTPReply& Reply,
-						const HTTPClientRef& Client, const APIRequest& Request, APIEndpoint* Endpoint)
+						const Reference<HTTPClient>& Client, const APIRequest& Request, APIEndpoint* Endpoint)
 		: IdentifyRequest(o, acc, pass)
 		, reply(Reply)
 		, client(Client)

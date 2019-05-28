@@ -12,6 +12,4 @@ typedef std::pair<Anope::string, time_t> ResetInfo;
 typedef Serialize::Reference<NickCore> NickCoreRef;
 typedef Serialize::Reference<NickAlias> NickAliasRef;
 
-typedef Reference<HTTPClient> HTTPClientRef;
-
 #endif //ANOPE_SNOO_TYPES_H
