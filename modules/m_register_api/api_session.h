@@ -1,7 +1,7 @@
 #ifndef ANOPE_API_SESSION_H
 #define ANOPE_API_SESSION_H
 
-#include "snoo_types.h"
+#include "third/snoo_types.h"
 
 #define SESSION_TYPE "API_Session"
 

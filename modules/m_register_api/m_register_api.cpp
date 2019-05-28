@@ -1,7 +1,7 @@
 #include "module.h"
 #include "modules/httpd.h"
-#include "json_api.h"
-#include "mail_template.h"
+#include "third/json_api.h"
+#include "third/mail_template.h"
 #include "api_session.h"
 
 #define GUEST_SUFFIX_LENGTH 7
@@ -10,6 +10,10 @@
 #define RESET_CONFIRM_LEN 20
 
 #define DEFAULT_PASS_LEN 32
+
+ExtensibleRef<Anope::string> passcodeExt("passcode");
+ExtensibleRef<bool> unconfirmedExt("UNCONFIRMED");
+ExtensibleRef<Anope::string> regserverExt("REGSERVER");
 
 class APIRequest
 	: public HTTPMessage
