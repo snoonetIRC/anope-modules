@@ -128,8 +128,6 @@ This allows finer control from the API consumer side as to the separation of aut
 
 ##### Errors
 
-`{"error":{"id":"no_account","message":"Unable to find matching account"},"status":"error"}`
-
 `{"error":{"id":"wrong_code","message":"Invalid reset token"},"status":"error"}`
 
 `{"error":{"id":"expired_code","message":"Expired reset token"},"status":"error"}`

@@ -819,23 +819,21 @@ class ResetConfirmEndpoint
 		bool has_password = request.GetParameter("newpass", password);
 
 		NickAlias* na = NickAlias::Find(account);
+		NickCore* nc;
 
-		if (!na)
-		{
-			errorObject["id"] = "no_account";
-			errorObject["message"] = "Unable to find matching account";
-			return false;
-		}
-
-		NickCore* nc = na->nc;
+		if (na)
+			nc = na->nc;
+		else
+			nc = NULL;
 
 		ResetInfo* ri;
-		if (!((ri = resetinfo.Get(nc)) && ri->first == code))
+		if (!nc || !(ri = resetinfo.Get(nc)) || ri->first != code)
 		{
 			errorObject["id"] = "wrong_code";
 			errorObject["message"] = "Invalid reset token";
 			return false;
 		}
+
 
 		if (ri->second + 3600 < Anope::CurTime)
 		{
