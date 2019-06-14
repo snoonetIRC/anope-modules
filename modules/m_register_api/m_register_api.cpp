@@ -765,22 +765,16 @@ class ResetPassEndpoint
 		NickAlias* na = NickAlias::Find(account);
 
 		if (!na)
+			APILogger(*this, request) << "Attempt to reset password for non-existent account '" << account << "'";
+
+		if (na && !na->nc->email.equals_ci(email))
 		{
-			errorObject["id"] = "no_account";
-			errorObject["message"] = "Unable to find matching account";
-			return false;
+			APILogger(*this, request) << "Incorrect email (" << email
+				<< ") for account '" << na->nc->display << "'";
+			na = NULL;
 		}
 
-		NickCore* nc = na->nc;
-
-		if (!nc->email.equals_ci(email))
-		{
-			errorObject["id"] = "no_account";
-			errorObject["message"] = "Unable to find matching account";
-			return false;
-		}
-
-		if (!SendResetmail(na))
+		if (na && !SendResetmail(na))
 		{
 			errorObject["id"] = "mail_failed";
 			errorObject["message"] = "Unable to send reset email";

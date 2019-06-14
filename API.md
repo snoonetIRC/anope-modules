@@ -98,11 +98,9 @@ _Note: The `message` field is meant only to describe the error to a user, this t
 #### Responses
 ##### Success
 
-`{"status":"ok"}`
+`{"status":"ok"}` - Returned if the password reset email was sent or the account/email don't match a valid account, meaning it will "silently" (logged internally) ignore invalid account details
 
 #### Errors
-
-`{"error":{"id":"no_account","message":"Unable to find matching account"},"status":"error"}`
 
 `{"error":{"id":"mail_failed","message":"Unable to send reset email"},"status":"error"}`
 
