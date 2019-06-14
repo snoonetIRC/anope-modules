@@ -797,16 +797,15 @@ class ResetConfirmEndpoint
 	PasswordChecker passcheck;
 
  public:
-	SerializableExtensibleItem<bool> resetting;
 	PrimitiveExtensibleItem<ResetInfo>& resetinfo;
 
 	ResetConfirmEndpoint(Module* Creator, PrimitiveExtensibleItem<ResetInfo>& Resetinfo)
 		: BasicAPIEndpoint(Creator, "resetpass/confirm")
-		, resetting(Creator, "resetting_pass")
 		, resetinfo(Resetinfo)
 	{
 		AddRequiredParam("account");
 		AddRequiredParam("code");
+		AddRequiredParam("newpass");
 	}
 
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
@@ -815,8 +814,7 @@ class ResetConfirmEndpoint
 
 		account = request.GetParameter("account");
 		code = request.GetParameter("code");
-
-		bool has_password = request.GetParameter("newpass", password);
+		password = request.GetParameter("mewpass");
 
 		NickAlias* na = NickAlias::Find(account);
 		NickCore* nc;
@@ -834,7 +832,6 @@ class ResetConfirmEndpoint
 			return false;
 		}
 
-
 		if (ri->second + 3600 < Anope::CurTime)
 		{
 			errorObject["id"] = "expired_code";
@@ -844,29 +841,14 @@ class ResetConfirmEndpoint
 
 		resetinfo.Unset(nc);
 
-		if (has_password)
+		if (!passcheck.Check(nc->display, password))
 		{
-			if (!passcheck.Check(nc->display, password))
-			{
-				errorObject["id"] = "invalid_password";
-				errorObject["message"] = "That password is invalid";
-				return false;
-			}
-
-			Anope::Encrypt(password, nc->pass);
-			responseObject["password_set"] = true;
-		}
-		else if (unconfirmedExt)
-		{
-			unconfirmedExt->Set(nc);
-			resetting.Set(nc);
-			responseObject["password_set"] = false;
+			errorObject["id"] = "invalid_password";
+			errorObject["message"] = "That password is invalid";
+			return false;
 		}
 
-		request.session = new Session(nc);
-
-		responseObject["account"] = nc->display;
-		responseObject["verified"] = !unconfirmedExt || !unconfirmedExt->HasExt(nc);
+		Anope::Encrypt(password, nc->pass);
 
 		return true;
 	}
@@ -881,11 +863,9 @@ class SetPasswordEndpoint
 	: public BasicAPIEndpoint
 {
 	PasswordChecker passcheck;
-	SerializableExtensibleItem<bool>& resetting;
  public:
-	SetPasswordEndpoint(Module* Creator, SerializableExtensibleItem<bool>& Resetting)
+	SetPasswordEndpoint(Module* Creator)
 		: BasicAPIEndpoint(Creator, "user/set/password")
-		, resetting(Resetting)
 	{
 		RequireSession();
 		AddRequiredParam("newpass");
@@ -906,13 +886,6 @@ class SetPasswordEndpoint
 		}
 
 		Anope::Encrypt(password, nc->pass);
-
-		if (resetting.HasExt(nc))
-		{
-			resetting.Unset(nc);
-			if (unconfirmedExt)
-				unconfirmedExt->Unset(nc);
-		}
 
 		return true;
 	}
@@ -950,7 +923,7 @@ class RegisterApiModule
 		, logout(this)
 		, resetpass(this)
 		, resetconfirm(this, resetpass.resetinfo)
-		, setpass(this, resetconfirm.resetting)
+		, setpass(this)
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.2");

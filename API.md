@@ -107,24 +107,15 @@ _Note: The `message` field is meant only to describe the error to a user, this t
 `{"error":{"id":"mail_failed","message":"Unable to send reset email"},"status":"error"}`
 
 ### `/resetpass/confirm` - Confirm a password reset
-This has two main uses:
-- Simply confirming the reset request and logging in the user, which will then mark the account as unconfirmed until the user changes their password, or
-- Confirming the reset request and also setting the password to `newpass` in one request (requires sending the `newpass` parameter
-
-This allows finer control from the API consumer side as to the separation of authentication and modification of the account
-
 #### Params
 - `account` - Account name to reset the password for
 - `code` - Confirmation code from the user
-- `newpass` _optional_ - If set, sets the new password in this request, otherwise a later request to `/user/set/password` is required.
+- `newpass` - Sets the new password
 
 #### Responses
 ##### Success
 
-`{"status":"ok","password_set":true|false,"account":"<ACCOUNT_NAME>","verified":true|false,"session":"<SESSION_ID>"}`
-
-- `password_set` - Was the password changed in this request or is a future request to `/user/set/password` required
-- `verified` - Is the account a verified account or not
+`{"status":"ok"}`
 
 ##### Errors
 
