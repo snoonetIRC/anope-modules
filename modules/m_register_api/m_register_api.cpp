@@ -816,11 +816,17 @@ class ResetConfirmEndpoint
 		if (na)
 			nc = na->nc;
 		else
+		{
+			APILogger(*this, request) << "Attempt to confirm a request for a non-existent account '" << account << "'";
 			nc = NULL;
+		}
 
 		ResetInfo* ri;
 		if (!nc || !(ri = resetinfo.Get(nc)) || ri->first != code)
 		{
+			if (nc)
+				APILogger(*this, request) << "Attempt to confirm a request for '" << account << "' with an invalid code";
+
 			errorObject["id"] = "wrong_code";
 			errorObject["message"] = "Invalid reset token";
 			return false;
@@ -828,6 +834,7 @@ class ResetConfirmEndpoint
 
 		if (ri->second + 3600 < Anope::CurTime)
 		{
+			APILogger(*this, request) << "Attempt to confirm a request for '" << account << "' with an expired code";
 			errorObject["id"] = "expired_code";
 			errorObject["message"] = "Expired reset token";
 			return false;
