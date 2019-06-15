@@ -157,6 +157,15 @@ struct PasswordChecker
 	}
 };
 
+class APIEndpoint;
+
+class APILogger
+	: public Log
+{
+ public:
+	APILogger(const APIEndpoint& endpoint, const APIRequest& request);
+};
+
 class APIEndpoint
 	: public JsonAPIEndpoint
 {
@@ -244,8 +253,7 @@ class APIEndpoint
 			return true;
 		}
 
-		Log(LOG_NORMAL, this->GetEndpointID()) << "API: " << GetEndpointID() << ": Request received from "
-											   << request.getClientId() << " on " << request.getClientIp();
+		APILogger(*this, request) << "Request received";
 
 		return HandleRequest(provider, string, client, request, reply);
 	}
@@ -258,22 +266,17 @@ class APIEndpoint
 	}
 };
 
-class APILogger
-	: public Log
+APILogger::APILogger(const APIEndpoint& endpoint, const APIRequest& request)
+	: Log(LOG_NORMAL, endpoint.GetEndpointID())
 {
- public:
-	APILogger(const APIEndpoint& endpoint, const APIRequest& request)
-		: Log(LOG_NORMAL, endpoint.GetURL().substr(1))
-	{
-		*this << "API: " << category << " from " << request.getClientId()
-			  << " on " << request.getClientIp();
+	*this << "API: " << category << " from " << request.getClientId()
+		  << " on " << request.getClientIp();
 
-		if (!request.getUserIp().empty())
-			*this << " (user: " << request.getUserIp() << ")";
+	if (!request.getUserIp().empty())
+		*this << " (user: " << request.getUserIp() << ")";
 
-		*this << ": ";
-	}
-};
+	*this << ": ";
+}
 
 class BasicAPIEndpoint
 	: public APIEndpoint
