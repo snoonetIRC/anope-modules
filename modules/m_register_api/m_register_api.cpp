@@ -791,13 +791,14 @@ class ResetPassEndpoint
 class ResetConfirmEndpoint
 	: public BasicAPIEndpoint
 {
-	PasswordChecker passcheck;
+	const PasswordChecker& passcheck;
 
  public:
 	PrimitiveExtensibleItem<ResetInfo>& resetinfo;
 
-	ResetConfirmEndpoint(Module* Creator, PrimitiveExtensibleItem<ResetInfo>& Resetinfo)
+	ResetConfirmEndpoint(Module* Creator, PrimitiveExtensibleItem<ResetInfo>& Resetinfo, const PasswordChecker& Checker)
 		: BasicAPIEndpoint(Creator, "resetpass/confirm")
+		, passcheck(Checker)
 		, resetinfo(Resetinfo)
 	{
 		AddRequiredParam("account");
@@ -856,20 +857,16 @@ class ResetConfirmEndpoint
 
 		return true;
 	}
-
-	void DoReload(Configuration::Conf* conf) anope_override
-	{
-		passcheck.DoReload(conf);
-	}
 };
 
 class SetPasswordEndpoint
 	: public BasicAPIEndpoint
 {
-	PasswordChecker passcheck;
+	const PasswordChecker& passcheck;
  public:
-	SetPasswordEndpoint(Module* Creator)
+	SetPasswordEndpoint(Module* Creator, const PasswordChecker& Checker)
 		: BasicAPIEndpoint(Creator, "user/set/password")
+		, passcheck(Checker)
 	{
 		RequireSession();
 		AddRequiredParam("newpass");
@@ -893,11 +890,6 @@ class SetPasswordEndpoint
 
 		return true;
 	}
-
-	void DoReload(Configuration::Conf* conf) anope_override
-	{
-		passcheck.DoReload(conf);
-	}
 };
 
 class RegisterApiModule
@@ -905,6 +897,8 @@ class RegisterApiModule
 {
 	ServiceReference<HTTPProvider> httpd;
 	Serialize::Type session_type;
+
+	PasswordChecker passcheck;
 
 	RegistrationEndpoint reg;
 	ConfirmEndpoint confirm;
@@ -926,8 +920,8 @@ class RegisterApiModule
 		, login(this)
 		, logout(this)
 		, resetpass(this)
-		, resetconfirm(this, resetpass.resetinfo)
-		, setpass(this)
+		, resetconfirm(this, resetpass.resetinfo, passcheck)
+		, setpass(this, passcheck)
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.2");
