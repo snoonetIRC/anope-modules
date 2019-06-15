@@ -808,7 +808,7 @@ class ResetConfirmEndpoint
 
 		account = request.GetParameter("account");
 		code = request.GetParameter("code");
-		password = request.GetParameter("mewpass");
+		password = request.GetParameter("newpass");
 
 		NickAlias* na = NickAlias::Find(account);
 		NickCore* nc;
