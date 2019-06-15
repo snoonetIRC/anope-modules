@@ -840,8 +840,6 @@ class ResetConfirmEndpoint
 			return false;
 		}
 
-		resetinfo.Unset(nc);
-
 		if (!passcheck.Check(nc->display, password))
 		{
 			errorObject["id"] = "invalid_password";
@@ -850,6 +848,8 @@ class ResetConfirmEndpoint
 		}
 
 		Anope::Encrypt(password, nc->pass);
+
+		resetinfo.Unset(nc);
 
 		return true;
 	}
