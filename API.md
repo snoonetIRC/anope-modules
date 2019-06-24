@@ -90,3 +90,52 @@ _Note: The `message` field is meant only to describe the error to a user, this t
 
 `{"error":{"id":"no_login","message":"You are not logged in to an account"},"status":"error"}`
 
+### `/resetpass` - Reset a password for a user
+#### Params
+- `account`
+- `email`
+
+#### Responses
+##### Success
+
+`{"status":"ok"}` - Returned if the password reset email was sent or the account/email don't match a valid account, meaning it will "silently" (logged internally) ignore invalid account details
+
+#### Errors
+
+`{"error":{"id":"mail_failed","message":"Unable to send reset email"},"status":"error"}`
+
+### `/resetpass/confirm` - Confirm a password reset
+#### Params
+- `account` - Account name to reset the password for
+- `code` - Confirmation code from the user
+- `newpass` - Sets the new password
+
+#### Responses
+##### Success
+
+`{"status":"ok"}`
+
+##### Errors
+
+`{"error":{"id":"wrong_code","message":"Invalid reset token"},"status":"error"}`
+
+`{"error":{"id":"expired_code","message":"Expired reset token"},"status":"error"}`
+
+`{"error":{"id":"invalid_password","message":"That password is invalid"},"status":"error"}`
+
+### `/user/set/password` - Set the user's password
+#### Params
+- `session`
+- `newpass`
+
+#### Responses
+##### Success
+
+`{"status":"ok"}`
+
+##### Errors
+
+`{"error":{"id":"no_login","message":"You are not logged in to an account"},"status":"error"}`
+
+`{"error":{"id":"invalid_password","message":"That password is invalid"},"status":"error"}`
+

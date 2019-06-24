@@ -36,6 +36,7 @@ class EmailTemplate
 {
  private:
 	Anope::string name;
+	Anope::string network;
 	MessageT subject;
 	MessageT message;
 
@@ -47,7 +48,17 @@ class EmailTemplate
 
 	EmailMessage MakeMessage(NickCore* nc) const
 	{
-		return EmailMessage(nc, subject, message);
+		EmailMessage msg(nc, subject, message);
+		msg.SetVariable("%N", network);
+		return msg;
+	}
+
+	EmailMessage MakeMessage(NickAlias* na) const
+	{
+		EmailMessage msg(na->nc, subject, message);
+		msg.SetVariable("%n", na->nick);
+		msg.SetVariable("%N", network);
+		return msg;
 	}
 
 	void DoReload(Configuration::Conf* conf)
@@ -55,6 +66,8 @@ class EmailTemplate
 		Configuration::Block* mailblock = conf->GetBlock("mail");
 		subject = mailblock->Get<const MessageT>(name + "_subject");
 		message = mailblock->Get<const MessageT>(name + "_message");
+
+		network = conf->GetBlock("networkinfo")->Get<const Anope::string>("networkname");
 	}
 };
 
