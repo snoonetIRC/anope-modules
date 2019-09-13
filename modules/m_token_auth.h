@@ -215,6 +215,7 @@ bool AuthTokenList::AddToken(AuthToken* token)
 		tokens.erase(token->GetToken());
 		return false;
 	}
+
 	list.push_back(token);
 	return true;
 }
@@ -230,7 +231,6 @@ AuthToken* AuthTokenList::NewToken(const Anope::string& name)
 	}
 
 	t->QueueUpdate();
-
 	return t;
 }
 
@@ -263,7 +263,9 @@ Serializable* AuthToken::Unserialize(Serializable* obj, Serialize::Data& data)
 		tkn->set_at = settime;
 	}
 	else
-		tkn = new AuthToken(nc, name, token, settime);
+	{
+			tkn = new AuthToken(nc, name, token, settime);
+	}
 
 	data["last_used"] >> tkn->last_used;
 

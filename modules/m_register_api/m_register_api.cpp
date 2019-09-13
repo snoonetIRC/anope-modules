@@ -915,6 +915,7 @@ class TokenEndpoint
 			errorObject["message"] = "Token authentication appears to be disabled";
 			return false;
 		}
+
 		return HandleTokenRequest(request, responseObject, errorObject, tokens);
 	}
 
@@ -978,7 +979,6 @@ class DeleteTokenEndpoint
 		}
 
 		delete token;
-
 		return true;
 	}
 };
@@ -1006,6 +1006,7 @@ class ListTokensEndpoint
 
 			tokenlist.push_back(tokenObj);
 		}
+
 		responseObject["tokens"] = tokenlist;
 		return true;
 	}
