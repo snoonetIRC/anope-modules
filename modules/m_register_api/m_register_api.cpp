@@ -968,7 +968,7 @@ class DeleteTokenEndpoint
 		Anope::string id = request.GetParameter("id");
 		AuthToken* token = tokens->FindToken(id);
 		if (!token && id.is_number_only())
-			token = tokens->GetToken(convertTo<int>(id));
+			token = tokens->GetToken(convertTo<int>(id) - 1);
 
 		if (!token)
 		{
