@@ -74,7 +74,7 @@ class AuthToken
 		return token;
 	}
 
-	void Serialize(Serialize::Data& data) const;
+	void Serialize(Serialize::Data& data) const anope_override;
 
 	static Serializable* Unserialize(Serializable* obj, Serialize::Data& data);
 
@@ -275,7 +275,7 @@ Serializable* AuthToken::Unserialize(Serializable* obj, Serialize::Data& data)
 	return tkn;
 }
 
-AuthToken::~AuthToken() anope_override
+AuthToken::~AuthToken()
 {
 	AuthTokenList* tokens;
 	if (nc && (tokens = GetTokenList(nc)))
@@ -287,7 +287,7 @@ void AuthToken::Update()
 	GetTokenList(nc, true)->UpdateToken(this);
 }
 
-void AuthToken::Serialize(Serialize::Data& data) const anope_override
+void AuthToken::Serialize(Serialize::Data& data) const
 {
 	data["nc"] << nc->display;
 	data["name"] << GetName();
