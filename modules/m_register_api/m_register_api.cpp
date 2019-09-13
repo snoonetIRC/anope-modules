@@ -941,6 +941,7 @@ class AddTokenEndpoint
 		{
 			errorObject["id"] = "token_add_failed";
 			errorObject["message"] = "Unable to add token";
+			APILogger(*this, request) << "Attempt to add duplicate tokens to account: " << request.session->nc->display;
 			return false;
 		}
 

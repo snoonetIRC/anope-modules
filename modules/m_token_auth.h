@@ -308,6 +308,7 @@ bool AuthToken::AddLogin(User* u)
 	}
 	else
 	{
+		Log(LOG_NORMAL, "tokenauth/addlogin") << "AUTHTOKEN: Login added for account " << nc->display << " with no User information";
 		// TODO this is probably a web or API login, find some other way to store the session
 	}
 	last_used = Anope::CurTime;
