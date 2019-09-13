@@ -264,7 +264,7 @@ Serializable* AuthToken::Unserialize(Serializable* obj, Serialize::Data& data)
 	}
 	else
 	{
-			tkn = new AuthToken(nc, name, token, settime);
+		tkn = new AuthToken(nc, name, token, settime);
 	}
 
 	data["last_used"] >> tkn->last_used;
