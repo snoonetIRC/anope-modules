@@ -139,3 +139,50 @@ _Note: The `message` field is meant only to describe the error to a user, this t
 
 `{"error":{"id":"invalid_password","message":"That password is invalid"},"status":"error"}`
 
+### `/user/token/add` - Add an authentication token to the user's account
+
+Authentication tokens can be used in place of passwords anywhere a password is needed
+
+#### Params
+- `session`
+- `name`
+
+#### Responses
+##### Success
+
+`{"status":"ok","token":{"token":"<AUTH_TOKEN>","name":"<TOKEN_NAME>"}}`
+
+##### Errors
+
+`{"error":{"id":"token_add_failed","message":"Unable to add token"},"status":"error"}`
+
+`{"error":{"id":"tokens_disabled","message":"Token authentication appears to be disabled"},"status":"error"}`
+
+### `/user/token/list` - List current authentication tokens on the account
+#### Params
+- `session`
+
+#### Responses
+##### Success
+
+`{"status":"ok","tokens":[{"token":"<AUTH_TOKEN>","name":"<TOKEN_NAME>","id":1}]}`
+
+##### Errors
+
+`{"error":{"id":"tokens_disabled","message":"Token authentication appears to be disabled"},"status":"error"}`
+
+### `/user/token/delete` - Remove an authentication token
+#### Params
+- `id` - Either the numeric ID or the token itself to be removed
+
+#### Responses
+##### Success
+
+`{"status":"ok"}`
+
+##### Errors
+
+`{"error":{"id":"tokens_disabled","message":"Token authentication appears to be disabled"},"status":"error"}`
+
+`{"error":{"id":"no_token","message":"No matching token found."},"status":"error"}`
+
