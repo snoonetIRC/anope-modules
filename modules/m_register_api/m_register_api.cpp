@@ -2,6 +2,7 @@
 #include "modules/httpd.h"
 #include "third/json_api.h"
 #include "third/mail_template.h"
+#include "third/m_token_auth.h"
 #include "api_session.h"
 
 #define GUEST_SUFFIX_LENGTH 7
@@ -773,7 +774,7 @@ class ResetPassEndpoint
 		if (na && !na->nc->email.equals_ci(email))
 		{
 			APILogger(*this, request) << "Incorrect email (" << email
-				<< ") for account '" << na->nc->display << "'";
+									  << ") for account '" << na->nc->display << "'";
 			na = NULL;
 		}
 
@@ -892,6 +893,121 @@ class SetPasswordEndpoint
 	}
 };
 
+class TokenEndpoint
+	: public BasicAPIEndpoint
+{
+ public:
+	TokenEndpoint(Module* Creator, const Anope::string& name)
+		: BasicAPIEndpoint(Creator, "user/token/" + name)
+	{
+		RequireSession();
+	}
+
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	{
+		SessionRef session = request.session;
+		NickCore* nc = session->Account();
+
+		AuthTokenList* tokens = GetTokenList(nc, true);
+		if (!tokens)
+		{
+			errorObject["id"] = "tokens_disabled";
+			errorObject["message"] = "Token authentication appears to be disabled";
+			return false;
+		}
+		return HandleTokenRequest(request, responseObject, errorObject, tokens);
+	}
+
+	virtual bool HandleTokenRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject, AuthTokenList* tokens) = 0;
+};
+
+class AddTokenEndpoint
+	: public TokenEndpoint
+{
+ public:
+	AddTokenEndpoint(Module* Creator)
+		: TokenEndpoint(Creator, "add")
+	{
+		AddRequiredParam("name");
+	}
+
+	bool HandleTokenRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject, AuthTokenList* tokens) anope_override
+	{
+		Anope::string name = request.GetParameter("name");
+		AuthToken* token = tokens->NewToken(name);
+
+		if (!token)
+		{
+			errorObject["id"] = "token_add_failed";
+			errorObject["message"] = "Unable to add token";
+			return false;
+		}
+
+		JsonObject tokenjson;
+		tokenjson["name"] = token->GetName();
+		tokenjson["token"] = token->GetToken();
+
+		responseObject["token"] = tokenjson;
+
+		return true;
+	}
+};
+
+class DeleteTokenEndpoint
+	: public TokenEndpoint
+{
+ public:
+	DeleteTokenEndpoint(Module* Creator)
+		: TokenEndpoint(Creator, "delete")
+	{
+		AddRequiredParam("id");
+	}
+
+	bool HandleTokenRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject, AuthTokenList* tokens) anope_override
+	{
+		Anope::string id = request.GetParameter("id");
+		AuthToken* token = tokens->FindToken(id);
+		if (!token)
+		{
+			errorObject["id"] = "no_token";
+			errorObject["message"] = "No matching token found.";
+			return false;
+		}
+
+		delete token;
+
+		return true;
+	}
+};
+
+class ListTokensEndpoint
+	: public TokenEndpoint
+{
+ public:
+	ListTokensEndpoint(Module* Creator)
+		: TokenEndpoint(Creator, "list")
+	{
+	}
+
+	bool HandleTokenRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject, AuthTokenList* tokens) anope_override
+	{
+		JsonArray tokenlist;
+		AuthToken* t;
+		for (long i = 0; (t = tokens->GetToken(i)); ++i)
+		{
+			JsonObject tokenObj;
+
+			tokenObj["name"] = t->GetName();
+			tokenObj["token"] = t->GetToken();
+			tokenObj["id"] = i + 1;
+
+			tokenlist.push_back(tokenObj);
+		}
+		responseObject["tokens"] = tokenlist;
+		return true;
+	}
+};
+
 class RegisterApiModule
 	: public Module
 {
@@ -907,6 +1023,9 @@ class RegisterApiModule
 	ResetPassEndpoint resetpass;
 	ResetConfirmEndpoint resetconfirm;
 	SetPasswordEndpoint setpass;
+	AddTokenEndpoint addtoken;
+	DeleteTokenEndpoint deltoken;
+	ListTokensEndpoint listtoken;
 
 	typedef std::vector<APIEndpoint*> PageList;
 	PageList pages;
@@ -922,6 +1041,9 @@ class RegisterApiModule
 		, resetpass(this)
 		, resetconfirm(this, resetpass.resetinfo, passcheck)
 		, setpass(this, passcheck)
+		, addtoken(this)
+		, deltoken(this)
+		, listtoken(this)
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.2");
@@ -933,6 +1055,9 @@ class RegisterApiModule
 		pages.push_back(&resetpass);
 		pages.push_back(&resetconfirm);
 		pages.push_back(&setpass);
+		pages.push_back(&addtoken);
+		pages.push_back(&deltoken);
+		pages.push_back(&listtoken);
 	}
 
 	void RegisterPages()
