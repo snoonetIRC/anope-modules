@@ -9,14 +9,6 @@
  * 	command to list active sessions
  */
 
-// Messages
-#define TOKEN_NAME_CONFLICT "A token with that name already exists."
-#define TOKEN_ADDED "Token successfully added."
-#define TOKEN_LIST_EMPTY "Authentication token list is empty."
-#define TOKEN_NO_MATCH "No matching authentication tokens found"
-#define TOKEN_DELETED "Deleted 1 authentication token."
-#define TOKEN_DELETED_MULTI "Deleted %d authentication tokens."
-
 class ModuleTokenAuth
 	: public Module
 {
