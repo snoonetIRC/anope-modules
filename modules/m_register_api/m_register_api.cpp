@@ -105,6 +105,9 @@ struct RegisterData
 	Anope::string source;
 	Anope::string ident;
 	Anope::string ip;
+	bool force_confirm;
+
+	RegisterData() : force_confirm(false) {}
 
 	static RegisterData FromMessage(APIRequest& request)
 	{
@@ -115,6 +118,7 @@ struct RegisterData
 		data.email = request.GetParameter("email");
 		data.password = request.GetParameter("password");
 		data.source = request.GetParameter("source");
+		data.force_confirm = request.GetParameter("force_confirm") == "1";
 		return data;
 	}
 };
@@ -520,7 +524,14 @@ class RegistrationEndpoint
 		if (regserverExt)
 			regserverExt->Set(nc, data.source);
 
-		DoConfirm(na, data);
+		if (!data.force_confirm)
+		{
+			DoConfirm(na, data);
+		}
+		else
+		{
+			APILogger(*this, request) << "Account " << nc->display << " confirmed via OAuth";
+		}
 
 		FOREACH_MOD(OnNickRegister, (NULL, na, data.password));
 
