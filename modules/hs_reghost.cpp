@@ -201,6 +201,7 @@ class HSRegHost
 
 	SerializableExtensibleItem<bool> recheck;
 	ExtensibleRef<Anope::string> regserver;
+	ExtensibleRef<bool> unconfirmedExt;
 
  public:
 	HSRegHost(const Anope::string& modname, const Anope::string& creator)
@@ -210,6 +211,7 @@ class HSRegHost
 		, replaceChar('-')
 		, recheck(this, "REGHOST_RECHECK")
 		, regserver("REGSERVER")
+		, unconfirmedExt("UNCONFIRMED")
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.5");
@@ -227,7 +229,8 @@ class HSRegHost
 
 	void OnNickRegister(User* user, NickAlias* na, const Anope::string& pass) anope_override
 	{
-		if (!requireConfirm && na->nc->aliases->size() == 1)
+		bool unconfirmed = unconfirmedExt && unconfirmedExt->HasExt(na->nc);
+		if (na->nc->aliases->size() == 1 && !unconfirmed)
 			SetVHost(na);
 	}
 

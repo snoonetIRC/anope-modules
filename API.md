@@ -18,6 +18,7 @@ Every endpoint accepts an optional `user_ip` parameter to specify the IP address
 - `source` -  A string identifying where the user is registering from, for `m_store_server`
 - `user_ip` - The IP address of the user creating this account
 - `ident` _optional_ - If specified, is used to populate the default access list for the new account
+- `oauth` _optional_ - If set to `1`, requires that the API wrapper verify the email address against the IRC.com API. This parameter only applies to the IRC.com implementation of this API.
 
 #### Responses
 ##### Success
