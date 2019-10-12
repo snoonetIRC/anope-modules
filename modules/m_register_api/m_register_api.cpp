@@ -1,4 +1,5 @@
 #include "module.h"
+#include "modules/os_forbid.h"
 #include "modules/httpd.h"
 #include "third/json_api.h"
 #include "third/mail_template.h"
@@ -327,6 +328,7 @@ class RegistrationEndpoint
 	bool accessonreg;
 
 	PasswordChecker passcheck;
+	ServiceReference<ForbidService> forbidService;
 
 	Anope::string nsregister;
 	Anope::string guestnick;
@@ -392,7 +394,7 @@ class RegistrationEndpoint
 		return true;
 	}
 
-	bool CheckUsername(const RegisterData& data, JsonObject& errorObject) const
+	bool CheckUsername(const RegisterData& data, JsonObject& errorObject)
 	{
 		if (User::Find(data.username) || BotInfo::Find(data.username, true) ||
 			(restrictopernicks && IsOperNick(data.username)))
@@ -422,10 +424,23 @@ class RegistrationEndpoint
 			errorObject["message"] = "Username is invalid";
 			return false;
 		}
+
+		if (forbidService)
+		{
+			ForbidData* nickforbid = forbidService->FindForbid(data.username, FT_NICK);
+			ForbidData* regforbid = forbidService->FindForbid(data.username, FT_REGISTER);
+			if (nickforbid || regforbid)
+			{
+				errorObject["id"] = "forbidden_user";
+				errorObject["message"] = "This nickname is forbidden from registration";
+				return false;
+			}
+		}
+
 		return true;
 	}
 
-	bool CheckEmail(const RegisterData& data, JsonObject& errorObject) const
+	bool CheckEmail(const RegisterData& data, JsonObject& errorObject)
 	{
 		if (data.email.empty())
 		{
@@ -447,10 +462,21 @@ class RegistrationEndpoint
 			return false;
 		}
 
+		if (forbidService)
+		{
+			ForbidData* f = this->forbidService->FindForbid(data.email, FT_EMAIL);
+			if (f)
+			{
+				errorObject["id"] = "forbidden_email";
+				errorObject["message"] = "This email address is forbidden";
+				return false;
+			}
+		}
+
 		return true;
 	}
 
-	bool CheckRequest(const RegisterData& data, JsonObject& errorObject) const
+	bool CheckRequest(const RegisterData& data, JsonObject& errorObject)
 	{
 		if (!CheckUsername(data, errorObject))
 			return false;
@@ -474,6 +500,7 @@ class RegistrationEndpoint
 		, restrictopernicks(true)
 		, forceemail(true)
 		, accessonreg(true)
+		, forbidService("ForbidService", "forbid")
 		, regmail("registration")
 	{
 		AddRequiredParam("username");
