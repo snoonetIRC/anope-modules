@@ -46,6 +46,8 @@ _Note: The `message` field is meant only to describe the error to a user, this t
 
 `{"error":{"id":"forbidden_email","message":"This email address is forbidden"},"status":"error"}`
 
+`{"error":{"id":"max_email","message":"This email address has reached its account limit"},"status":"error"}`
+
 `{"error":{"id":"invalid_password","message":"That password is invalid"},"status":"error"}`
 
 ### `/confirm` - Confirm an account registration
