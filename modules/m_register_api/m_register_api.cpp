@@ -1249,7 +1249,7 @@ class ListTagsEndpoint
 {
  public:
 	ListTagsEndpoint(Module* Creator)
-		: BasicAPIEndpoint(Creator, "user/tags")
+		: BasicAPIEndpoint(Creator, "user/tags/list")
 	{
 		RequireSession();
 	}
