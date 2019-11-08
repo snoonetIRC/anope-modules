@@ -187,3 +187,52 @@ Authentication tokens can be used in place of passwords anywhere a password is n
 
 `{"error":{"id":"no_token","message":"No matching token found."},"status":"error"}`
 
+### `/user/tags/add` - Associates a message tag with a user's account
+
+Authentication tags can be used in place of passwords anywhere a password is needed
+
+#### Params
+- `session`
+- `name` -  Tag name.
+- `value` - Tag value.
+
+#### Responses
+##### Success
+
+`{"session":"<AUTH_TOKEN>","status":"ok"}`
+
+##### Errors
+
+`{"error":{"id":"no_login","message":"Login required"},"status":"error"}`
+
+{"error":{"id":"invalid_tag_key","message":"Tag key contains an invalid character."},"status":"error"}
+
+### `/user/tags/delete` - Disassociates a message tag from a user's account
+#### Params
+- `session`
+- `name` -  Tag name.
+
+#### Responses
+##### Success
+
+`{"session":"<AUTH_TOKEN>","status":"ok"}`
+
+##### Errors
+
+`{"error":{"id":"no_login","message":"Login required"},"status":"error"}`
+
+`{"error":{"id":"no_tag","message":"No matching tag found."},"status":"error"}`
+
+### `/user/tags/list` - Lists message tags associated with a user's account
+#### Params
+- `session`
+
+#### Responses
+##### Success
+
+`{"session":"<AUTH_TOKEN>","status":"ok","tags":{"tagname":"tag value"}}`
+
+##### Errors
+
+`{"error":{"id":"no_login","message":"Login required"},"status":"error"}`
+
