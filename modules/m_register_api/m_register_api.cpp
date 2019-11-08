@@ -1186,11 +1186,22 @@ class AddTagEndpoint
 	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
 	{
 		Anope::string tagname = request.GetParameter("name");
-		Anope::string tagvalue = request.GetParameter("value");
-		
+		for (Anope::string::const_iterator iter = tagname.begin(); iter != tagname.end(); ++iter)
+		{
+			const char& chr = *iter;
+			if (!isalnum(chr) && chr != '-')
+			{
+				// We can't delete a non-existent tag.
+				errorObject["id"] = "invalid_tag_key";
+				errorObject["message"] = "Tag key contains an invalid character.";	
+				return false;
+			}
+		}
+
 		NickCore* nc = request.session->Account();
 		TagList* list = nc->Require<TagList>("taglist");
 
+		Anope::string tagvalue = request.GetParameter("value");	
 		size_t listidx = list->Find(tagname);
 		if (listidx < (*list)->size())
 		{
