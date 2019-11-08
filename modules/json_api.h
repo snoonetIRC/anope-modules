@@ -75,6 +75,11 @@ class JsonString
 	{
 	}
 
+	JsonString(const Anope::string& str)
+		: std::string(str.c_str())
+	{
+	}
+
 	JsonString(const std::string& str)
 		: std::string(str)
 	{
