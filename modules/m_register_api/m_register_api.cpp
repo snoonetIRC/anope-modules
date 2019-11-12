@@ -1033,6 +1033,254 @@ class ListTokensEndpoint
 	}
 };
 
+struct TagEntry;
+
+struct TagList : Serialize::Checker<std::vector<TagEntry*> >
+{
+	TagList(Extensible*)
+		: Serialize::Checker<std::vector<TagEntry*> >("TagEntry")
+	{
+	}
+
+	~TagList();
+	void Broadcast(NickCore* nc);
+	size_t Find(const Anope::string& name);
+};
+
+struct TagEntry : Serializable
+{
+	Serialize::Reference<NickCore> owner;
+	Anope::string name;
+	Anope::string value;
+
+	TagEntry(Extensible*)
+		: Serializable("TagEntry")
+	{
+	}
+
+	~TagEntry()
+	{
+		TagList* entries = owner->GetExt<TagList>("taglist");
+		if (entries)
+		{
+			std::vector<TagEntry*>::iterator it = std::find((*entries)->begin(), (*entries)->end(), this);
+			if (it != (*entries)->end())
+				(*entries)->erase(it);
+		}
+	}
+
+	void Serialize(Serialize::Data& sd) const anope_override
+	{
+		if (!this->owner)
+			return;
+
+		sd["owner"] << this->owner->display;
+		sd["name"] << this->name;
+		sd["value"] << this->value;
+	}
+
+	static Serializable* Unserialize(Serializable* obj, Serialize::Data& sd)
+	{
+		Anope::string sowner;
+		sd["owner"] >> sowner;
+		NickCore* nc = NickCore::Find(sowner);
+		if (!nc)
+			return NULL;
+
+		TagEntry* tag;
+		if (obj)
+			tag = anope_dynamic_static_cast<TagEntry*>(obj);
+		else
+		{
+			tag = new TagEntry(nc);
+			tag->owner = nc;
+		}
+
+		sd["name"] >> tag->name;
+		sd["value"] >> tag->value;
+
+		if (!obj)
+		{
+			TagList* entries = nc->Require<TagList>("taglist");
+			(*entries)->push_back(tag);
+		}
+
+		return tag;
+	}
+};
+
+TagList::~TagList()
+{
+	for (unsigned i = 0; i < (*this)->size(); ++i)
+		delete (*this)->at(i);
+}
+
+void TagList::Broadcast(NickCore* nc)
+{
+	if (nc->users.empty())
+		return;
+
+	Anope::string encodedtags;
+	for (size_t idx = 0; idx < (*this)->size(); ++idx)
+	{
+		if (idx > 0)
+			encodedtags.push_back(' ');
+
+		TagEntry* tag = (*this)->at(idx);
+		encodedtags.append(tag->name).push_back(' ');
+		for (Anope::string::const_iterator siter = tag->value.begin(); siter != tag->value.end(); ++siter)
+		{
+			switch (*siter)
+			{
+				case ';':
+					encodedtags.append("\\:");
+					break;
+				case ' ':
+					encodedtags.append("\\s");
+					break;
+				case '\\':
+					encodedtags.append("\\s");
+					break;
+				case '\r':
+					encodedtags.append("\\r");
+					break;
+				case '\n':
+					encodedtags.append("\\n");
+					break;
+				default:
+					encodedtags.append(*siter);
+					break;
+			}
+		}
+	}
+
+	for (std::list<User*>::const_iterator it = nc->users.begin(); it != nc->users.end(); ++it)
+		UplinkSocket::Message(Me) << "METADATA " << (*it)->GetUID() << " custom-tags :" << encodedtags;
+}
+
+size_t TagList::Find(const Anope::string& name)
+{
+	// It would be nice if we could use an iterator here but the serialization API
+	// sadly hides the typedefs necessary to use it with old style for loops.
+	for (size_t idx = 0; idx < (*this)->size(); ++idx)
+	{
+		TagEntry* entry = (*this)->at(idx);
+		if (entry->name == name)
+			return idx;
+	}
+	return SIZE_MAX;
+}
+
+class AddTagEndpoint
+	: public BasicAPIEndpoint
+{
+ public:
+	AddTagEndpoint(Module* Creator)
+		: BasicAPIEndpoint(Creator, "user/tags/add")
+	{
+		RequireSession();
+		AddRequiredParam("name");
+		AddRequiredParam("value");
+	}
+
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	{
+		Anope::string tagname = request.GetParameter("name");
+		for (Anope::string::const_iterator iter = tagname.begin(); iter != tagname.end(); ++iter)
+		{
+			const char& chr = *iter;
+			if (!isalnum(chr) && chr != '-')
+			{
+				// We can't delete a non-existent tag.
+				errorObject["id"] = "invalid_tag_key";
+				errorObject["message"] = "Tag key contains an invalid character.";	
+				return false;
+			}
+		}
+
+		NickCore* nc = request.session->Account();
+		TagList* list = nc->Require<TagList>("taglist");
+
+		Anope::string tagvalue = request.GetParameter("value");	
+		size_t listidx = list->Find(tagname);
+		if (listidx < (*list)->size())
+		{
+			// The tag already exists; update the value.
+			TagEntry* tag = (*list)->at(listidx);
+			tag->value = tagvalue;
+		}
+		else
+		{
+			// The tag doesn't exist, create a new entry.
+			TagEntry* tag = new TagEntry(nc);
+			tag->owner = nc;
+			tag->name = tagname;
+			tag->value = tagvalue;
+			(*list)->push_back(tag);
+		}
+
+		list->Broadcast(nc);
+		return true;
+	}
+};
+
+class DeleteTagEndpoint
+	: public BasicAPIEndpoint
+{
+ public:
+	DeleteTagEndpoint(Module* Creator)
+		: BasicAPIEndpoint(Creator, "user/tags/delete")
+	{
+		RequireSession();
+		AddRequiredParam("name");
+	}
+
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	{
+		NickCore* nc = request.session->Account();
+		TagList* list = nc->Require<TagList>("taglist");
+
+		size_t listidx = list->Find(request.GetParameter("name"));
+		if (listidx > (*list)->size())
+		{
+			// We can't delete a non-existent tag.
+			errorObject["id"] = "no_tag";
+			errorObject["message"] = "No matching tag found.";	
+			return false;
+		}
+	
+		(*list)->erase((*list)->begin() + listidx);
+		list->Broadcast(nc);
+		return true;
+	}
+};
+
+class ListTagsEndpoint
+	: public BasicAPIEndpoint
+{
+ public:
+	ListTagsEndpoint(Module* Creator)
+		: BasicAPIEndpoint(Creator, "user/tags/list")
+	{
+		RequireSession();
+	}
+
+	bool HandleRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject) anope_override
+	{
+		NickCore* nc = request.session->Account();
+		TagList* list = nc->Require<TagList>("taglist");
+
+		JsonObject taglist;
+		for (size_t idx = 0; idx < (*list)->size(); ++idx)
+		{
+			TagEntry* tag = (*list)->at(idx);
+			taglist[tag->name] = tag->value;
+		}
+		responseObject["tags"] = taglist;
+		return true;
+	}
+};
+
 class RegisterApiModule
 	: public Module
 {
@@ -1052,6 +1300,12 @@ class RegisterApiModule
 	DeleteTokenEndpoint deltoken;
 	ListTokensEndpoint listtoken;
 
+	ExtensibleItem<TagList> taglist;
+	Serialize::Type tagentry_type;
+	AddTagEndpoint addtag;
+	DeleteTagEndpoint deltag;
+	ListTagsEndpoint listtags;
+
 	typedef std::vector<APIEndpoint*> PageList;
 	PageList pages;
 
@@ -1069,6 +1323,11 @@ class RegisterApiModule
 		, addtoken(this)
 		, deltoken(this)
 		, listtoken(this)
+		, taglist(this, "taglist")
+		, tagentry_type("TagEntry", TagEntry::Unserialize)
+		, addtag(this)
+		, deltag(this)
+		, listtags(this)
 	{
 		this->SetAuthor("linuxdaemon");
 		this->SetVersion("0.2");
@@ -1083,6 +1342,9 @@ class RegisterApiModule
 		pages.push_back(&addtoken);
 		pages.push_back(&deltoken);
 		pages.push_back(&listtoken);
+		pages.push_back(&addtag);
+		pages.push_back(&deltag);
+		pages.push_back(&listtags);
 	}
 
 	void RegisterPages()
@@ -1106,6 +1368,13 @@ class RegisterApiModule
 	~RegisterApiModule() anope_override
 	{
 		UnregisterPages();
+	}
+
+	void OnUserLogin(User* u) anope_override
+	{
+		TagList* list = u->Account()->GetExt<TagList>("taglist");
+		if (list)
+			list->Broadcast(u->Account());
 	}
 
 	void OnReload(Configuration::Conf* conf) anope_override
