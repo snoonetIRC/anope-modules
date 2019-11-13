@@ -1,4 +1,5 @@
 #include "module.h"
+#include "modules/os_forbid.h"
 #include "modules/httpd.h"
 #include "third/json_api.h"
 #include "third/mail_template.h"
@@ -325,8 +326,12 @@ class RegistrationEndpoint
 	bool restrictopernicks;
 	bool forceemail;
 	bool accessonreg;
+	bool emailclean;
+
+	int maxemail;
 
 	PasswordChecker passcheck;
+	ServiceReference<ForbidService> forbidService;
 
 	Anope::string nsregister;
 	Anope::string guestnick;
@@ -392,7 +397,7 @@ class RegistrationEndpoint
 		return true;
 	}
 
-	bool CheckUsername(const RegisterData& data, JsonObject& errorObject) const
+	bool CheckUsername(const RegisterData& data, JsonObject& errorObject)
 	{
 		if (User::Find(data.username) || BotInfo::Find(data.username, true) ||
 			(restrictopernicks && IsOperNick(data.username)))
@@ -422,10 +427,73 @@ class RegistrationEndpoint
 			errorObject["message"] = "Username is invalid";
 			return false;
 		}
+
+		if (forbidService)
+		{
+			ForbidData* nickforbid = forbidService->FindForbid(data.username, FT_NICK);
+			ForbidData* regforbid = forbidService->FindForbid(data.username, FT_REGISTER);
+			if (nickforbid || regforbid)
+			{
+				errorObject["id"] = "forbidden_user";
+				errorObject["message"] = "This nickname is forbidden from registration";
+				return false;
+			}
+		}
+
 		return true;
 	}
 
-	bool CheckEmail(const RegisterData& data, JsonObject& errorObject) const
+	// Borrowed from ns_maxemail.cpp
+	Anope::string CleanEmail(const Anope::string& email)
+	{
+		size_t host = email.find('@');
+		if (host == Anope::string::npos)
+			return email;
+
+		Anope::string username = email.substr(0, host);
+		username = username.replace_all_cs(".", "");
+
+		size_t sz = username.find('+');
+		if (sz != Anope::string::npos)
+			username = username.substr(0, sz);
+
+		Anope::string cleaned = username + email.substr(host);
+		Log(LOG_DEBUG) << "cleaned " << email << " to " << cleaned;
+		return cleaned;
+	}
+
+	// Borrowed from ns_maxemail.cpp
+	int CountEmail(const Anope::string& email)
+	{
+		int count = 0;
+
+		if (email.empty())
+			return count;
+
+		Anope::string cleanemail = emailclean ? CleanEmail(email) : email;
+		for (nickcore_map::const_iterator it = NickCoreList->begin(), it_end = NickCoreList->end(); it != it_end; ++it)
+		{
+			const NickCore *nc = it->second;
+
+			Anope::string cleannc = emailclean ? CleanEmail(nc->email) : nc->email;
+
+			if (cleanemail.equals_ci(cleannc))
+				++count;
+		}
+
+		return count;
+	}
+
+	// Borrowed from ns_maxemail.cpp
+	bool CheckEmailLimitReached(const Anope::string& email)
+	{
+		if (maxemail < 1 || email.empty())
+			return false;
+
+		return CountEmail(email) >= maxemail;
+	}
+
+	bool CheckEmail(const RegisterData& data, JsonObject& errorObject)
 	{
 		if (data.email.empty())
 		{
@@ -447,10 +515,28 @@ class RegistrationEndpoint
 			return false;
 		}
 
+		if (forbidService)
+		{
+			ForbidData* f = this->forbidService->FindForbid(data.email, FT_EMAIL);
+			if (f)
+			{
+				errorObject["id"] = "forbidden_email";
+				errorObject["message"] = "This email address is forbidden";
+				return false;
+			}
+		}
+
+		if (this->CheckEmailLimitReached(data.email))
+		{
+			errorObject["id"] = "max_email";
+			errorObject["message"] = "This email address has reached its account limit";
+			return false;
+		}
+
 		return true;
 	}
 
-	bool CheckRequest(const RegisterData& data, JsonObject& errorObject) const
+	bool CheckRequest(const RegisterData& data, JsonObject& errorObject)
 	{
 		if (!CheckUsername(data, errorObject))
 			return false;
@@ -474,6 +560,9 @@ class RegistrationEndpoint
 		, restrictopernicks(true)
 		, forceemail(true)
 		, accessonreg(true)
+		, emailclean(true)
+		, maxemail(0)
+		, forbidService("ForbidService", "forbid")
 		, regmail("registration")
 	{
 		AddRequiredParam("username");
@@ -496,6 +585,10 @@ class RegistrationEndpoint
 		nsregister = conf->GetModule("ns_register")->Get<const Anope::string>("registration");
 
 		accessonreg = conf->GetModule("ns_access")->Get<bool>("addaccessonreg");
+
+		Configuration::Block* maxemailBlock = conf->GetModule("ns_maxemail");
+		maxemail = maxemailBlock->Get<int>("maxemails");
+		emailclean = maxemailBlock->Get<bool>("remove_aliases", "true");
 
 		regmail.DoReload(conf);
 		passcheck.DoReload(conf);

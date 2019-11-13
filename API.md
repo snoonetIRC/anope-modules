@@ -38,9 +38,15 @@ _Note: The `message` field is meant only to describe the error to a user, this t
 
 `{"error":{"id":"invalid_name","message":"Username is invalid"},"status":"error"}`
 
+`{"error":{"id":"forbidden_user","message":"This nickname is forbidden from registration"},"status":"error"}`
+
 `{"error":{"id":"missing_email","message":"An email address is required for registration"},"status":"error"}`
 
 `{"error":{"id":"invalid_email","message":"A valid email address is required for registration"},"status":"error"}`
+
+`{"error":{"id":"forbidden_email","message":"This email address is forbidden"},"status":"error"}`
+
+`{"error":{"id":"max_email","message":"This email address has reached its account limit"},"status":"error"}`
 
 `{"error":{"id":"invalid_password","message":"That password is invalid"},"status":"error"}`
 
