@@ -755,6 +755,7 @@ class APIIndentifyRequest
 		JsonObject obj;
 		obj["session"] = session->id;
 		obj["account"] = na->nc->display;
+		obj["email"] = na->nc->email;
 		obj["status"] = "ok";
 		obj["verified"] = !unconfirmedExt || !unconfirmedExt->HasExt(na->nc);
 
