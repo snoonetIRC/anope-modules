@@ -1287,7 +1287,7 @@ class AddTagEndpoint
 			{
 				// We can't delete a non-existent tag.
 				errorObject["id"] = "invalid_tag_key";
-				errorObject["message"] = "Tag key contains an invalid character.";	
+				errorObject["message"] = "Tag key contains an invalid character.";
 				return false;
 			}
 		}
@@ -1295,7 +1295,7 @@ class AddTagEndpoint
 		NickCore* nc = request.session->Account();
 		TagList* list = nc->Require<TagList>("taglist");
 
-		Anope::string tagvalue = request.GetParameter("value");	
+		Anope::string tagvalue = request.GetParameter("value");
 		size_t listidx = list->Find(tagname);
 		if (listidx < (*list)->size())
 		{
@@ -1339,10 +1339,10 @@ class DeleteTagEndpoint
 		{
 			// We can't delete a non-existent tag.
 			errorObject["id"] = "no_tag";
-			errorObject["message"] = "No matching tag found.";	
+			errorObject["message"] = "No matching tag found.";
 			return false;
 		}
-	
+
 		(*list)->erase((*list)->begin() + listidx);
 		list->Broadcast(nc);
 		return true;
@@ -1462,6 +1462,12 @@ class RegisterApiModule
 	~RegisterApiModule() anope_override
 	{
 		UnregisterPages();
+	}
+
+	void OnNickLogout(User *u) anope_override
+	{
+		// The account the user was using is unset before here so we can't check if they had tags. >:(
+		UplinkSocket::Message(Me) << "METADATA " << u->GetUID() << " custom-tags :";
 	}
 
 	void OnUserLogin(User* u) anope_override
