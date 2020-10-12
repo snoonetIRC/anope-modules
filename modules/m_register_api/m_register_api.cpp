@@ -231,6 +231,16 @@ class APIEndpoint
 		if (!request.IsValid())
 		{
 			reply.error = HTTP_BAD_REQUEST;
+
+			JsonObject error;
+			error["id"] = "invalid_request";
+			error["message"] = "Request is not valid";
+
+			JsonObject responseObj;
+			responseObj["status"] = "error";
+			responseObj["error"] = error;
+
+			reply.Write(responseObj.str());
 			return true;
 		}
 
@@ -1487,8 +1497,8 @@ class RegisterApiModule
 		if (!httpd)
 			throw ConfigException("Unable to find http reference, is m_httpd loaded?");
 
-		if (!httpd->IsSSL())
-			throw ConfigException("Registration API http must support SSL");
+		//if (!httpd->IsSSL())
+		//	throw ConfigException("Registration API http must support SSL");
 
 		RegisterPages();
 
