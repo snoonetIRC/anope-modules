@@ -1497,8 +1497,8 @@ class RegisterApiModule
 		if (!httpd)
 			throw ConfigException("Unable to find http reference, is m_httpd loaded?");
 
-		//if (!httpd->IsSSL())
-		//	throw ConfigException("Registration API http must support SSL");
+		if (!httpd->IsSSL())
+			throw ConfigException("Registration API http must support SSL");
 
 		RegisterPages();
 

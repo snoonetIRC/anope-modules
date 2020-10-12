@@ -238,9 +238,11 @@ Serializable* AuthToken::Unserialize(Serializable* obj, Serialize::Data& data)
 {
 	ExtensibleRef<AuthTokenList> extRef(TOKENS_EXT_NAME);
 	Anope::string disp, name, token;
+	uint64_t ncid = 0;
 	time_t settime;
 
 	data["nc"] >> disp;
+	data["nc_id"] >> ncid;
 	data["name"] >> name;
 	data["token"] >> token;
 	data["set_at"] >> settime;
@@ -248,6 +250,9 @@ Serializable* AuthToken::Unserialize(Serializable* obj, Serialize::Data& data)
 	NickCore* nc = NickCore::Find(disp);
 	if (!nc)
 		return NULL;
+
+	if (ncid && ncid != nc->GetId())
+		return NULL; // New account with the same display.
 
 	AuthToken* tkn;
 
@@ -290,6 +295,8 @@ void AuthToken::Update()
 void AuthToken::Serialize(Serialize::Data& data) const
 {
 	data["nc"] << nc->display;
+	data["nc_id"] << nc->GetId();
+
 	data["name"] << GetName();
 	data["token"] << GetToken();
 
