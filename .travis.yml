@@ -7,7 +7,5 @@ branches:
   only:
   - master
 env:
-- ANOPE_VERSION=2.0
-- ANOPE_VERSION=2.0 CXXFLAGS=-std=c++11
-- ANOPE_VERSION=2.0.6
-- ANOPE_VERSION=2.0.6 CXXFLAGS=-std=c++11
+- ANOPE_VERSION=2.0.8 CXXFLAGS=-std=c++98
+- ANOPE_VERSION=2.0.8 CXXFLAGS=-std=c++11
