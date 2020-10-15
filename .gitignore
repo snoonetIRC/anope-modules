@@ -1,0 +1,4 @@
+/anope-*
+/anope.tar.gz
+.*
+!.git*

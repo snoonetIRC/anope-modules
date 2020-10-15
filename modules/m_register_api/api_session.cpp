@@ -40,6 +40,9 @@ void Session::Serialize(Serialize::Data& data) const
 	if (nc)
 		data["nc"] << nc->display;
 
+	data.SetType("nc_id", Serialize::Data::DT_INT);
+	data["nc_id"] << nc->GetId();
+
 	SESS_FIELDS(INT_FIELD_SER)
 }
 
@@ -50,6 +53,11 @@ Serializable* Session::Unserialize(Serializable* obj, Serialize::Data& data)
 	NickCoreRef nc = NickCore::Find(snc);
 	if (!nc)
 		return NULL;
+
+	uint64_t sncid = 0;
+	data["nc_id"] >> sncid;
+	if (sncid && sncid != nc->GetId())
+		return NULL; // New account with the same display.
 
 	Session* session;
 	if (obj)
