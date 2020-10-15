@@ -193,6 +193,20 @@ Authentication tokens can be used in place of passwords anywhere a password is n
 
 `{"error":{"id":"no_token","message":"No matching token found."},"status":"error"}`
 
+### `/user/token/ping` - Prevents an authentication token from expiring
+#### Params
+- `session`
+
+#### Responses
+##### Success
+
+`{"status":"ok","expires":3133657200}`
+
+##### Errors
+
+`{"error":{"id":"tokens_disabled","message":"Token authentication appears to be disabled"},"status":"error"}`
+
+
 ### `/user/tags/add` - Associates a message tag with a user's account
 
 Authentication tags can be used in place of passwords anywhere a password is needed
