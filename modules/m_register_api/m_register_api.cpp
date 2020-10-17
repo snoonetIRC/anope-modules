@@ -1137,6 +1137,22 @@ class ListTokensEndpoint
 	}
 };
 
+class PingTokenEndpoint
+	: public TokenEndpoint
+{
+ public:
+	PingTokenEndpoint(Module* Creator)
+		: TokenEndpoint(Creator, "ping")
+	{
+	}
+
+	bool HandleTokenRequest(APIRequest& request, JsonObject& responseObject, JsonObject& errorObject, AuthTokenList* tokens) anope_override
+	{
+		responseObject["expires"] = request.session->lifetime + request.session->lastused;
+		return true;
+	}
+};
+
 struct TagEntry;
 
 struct TagList : Serialize::Checker<std::vector<TagEntry*> >
@@ -1403,6 +1419,7 @@ class RegisterApiModule
 	AddTokenEndpoint addtoken;
 	DeleteTokenEndpoint deltoken;
 	ListTokensEndpoint listtoken;
+	PingTokenEndpoint pingtoken;
 
 	ExtensibleItem<TagList> taglist;
 	Serialize::Type tagentry_type;
@@ -1427,6 +1444,7 @@ class RegisterApiModule
 		, addtoken(this)
 		, deltoken(this)
 		, listtoken(this)
+		, pingtoken(this)
 		, taglist(this, "taglist")
 		, tagentry_type("TagEntry", TagEntry::Unserialize)
 		, addtag(this)
@@ -1446,6 +1464,7 @@ class RegisterApiModule
 		pages.push_back(&addtoken);
 		pages.push_back(&deltoken);
 		pages.push_back(&listtoken);
+		pages.push_back(&pingtoken);
 		pages.push_back(&addtag);
 		pages.push_back(&deltag);
 		pages.push_back(&listtags);

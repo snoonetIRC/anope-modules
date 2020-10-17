@@ -3,6 +3,7 @@
 
 #include "third/snoo_types.h"
 
+#define SESSION_LIFETIME 604800
 #define SESSION_TYPE "API_Session"
 
 struct Session;
@@ -24,7 +25,7 @@ struct Session
 	time_t lastused;
 	time_t lifetime;
 
-	Session(const NickCoreRef& nickCore, time_t Lifetime = 86400);
+	Session(const NickCoreRef& nickCore, time_t Lifetime = SESSION_LIFETIME);
 
 	~Session();
 
