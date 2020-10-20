@@ -225,7 +225,7 @@ Authentication tags can be used in place of passwords anywhere a password is nee
 
 `{"error":{"id":"no_login","message":"Login required"},"status":"error"}`
 
-{"error":{"id":"invalid_tag_key","message":"Tag key contains an invalid character."},"status":"error"}
+`{"error":{"id":"invalid_tag_key","message":"Tag key contains an invalid character."},"status":"error"}`
 
 ### `/user/tags/delete` - Disassociates a message tag from a user's account
 #### Params
