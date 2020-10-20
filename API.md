@@ -78,7 +78,7 @@ _Note: The `message` field is meant only to describe the error to a user, this t
 #### Responses
 ##### Success
 
-`{"session":"<SESSION_ID>","account":"<ACCOUNT_NAME>","status":"ok","verified":true|false}`
+`{"session":"<SESSION_ID>","account":"<ACCOUNT_NAME>","status":"ok","verified":true|false,"expires":3133657200}`
 
 ##### Errors
 
