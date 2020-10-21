@@ -767,6 +767,7 @@ class APIIndentifyRequest
 		obj["account"] = na->nc->display;
 		obj["email"] = na->nc->email;
 		obj["status"] = "ok";
+		obj["expires"] = session->lifetime + session->lastused;
 		obj["verified"] = !unconfirmedExt || !unconfirmedExt->HasExt(na->nc);
 
 		APILogger(*endpoint, request) << "Account login: " << na->nc->display;
