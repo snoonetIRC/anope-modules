@@ -87,7 +87,10 @@ SessionRef Session::Find(const Anope::string& id, bool touch, bool check)
 		return NULL;
 
 	if (touch)
+	{
 		sess->lastused = Anope::CurTime;
+		sess->QueueUpdate();
+	}
 
 	return sess;
 }
