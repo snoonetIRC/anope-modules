@@ -3,7 +3,7 @@
 set -e
 
 if [[ -z $ANOPE_VERSION ]]; then
-    ANOPE_VERSION="2.0.8"
+    ANOPE_VERSION="2.0.9"
 fi
 
 wget -O anope.tar.gz "https://github.com/anope/anope/archive/${ANOPE_VERSION}.tar.gz"
