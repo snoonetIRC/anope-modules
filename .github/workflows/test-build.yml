@@ -1,0 +1,24 @@
+name: Test Build
+on:
+  - pull_request
+  - push
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    env:
+      CXX: ${{ matrix.compiler }}
+      CXXFLAGS: -std=${{ matrix.standard }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Modules
+        run: |
+          ./test_build.sh
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - clang++
+          - g++
+        standard:
+          - c++98
+          - c++17
